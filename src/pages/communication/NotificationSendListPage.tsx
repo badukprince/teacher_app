@@ -153,10 +153,15 @@ export function NotificationSendListPage() {
                   <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-600">{student.grade}</span>
                 </div>
                 <p className="mt-1 text-sm text-slate-500">{student.school} · {getClass(student.classId)?.name ?? '미배정'}</p>
-                <p className="mt-3 border-t border-slate-100 pt-3 text-sm text-slate-500">
-                  {lastLog
-                    ? `최근 발송: ${lastLog.type} · ${lastLog.channel} · ${new Date(lastLog.sentAt).toLocaleDateString('ko-KR')}`
-                    : '발송 이력 없음'}
+                <p className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-sm text-slate-500">
+                  <span>
+                    {lastLog
+                      ? `최근 발송: ${lastLog.type} · ${lastLog.channel} · ${new Date(lastLog.sentAt).toLocaleDateString('ko-KR')}`
+                      : '발송 이력 없음'}
+                  </span>
+                  {lastLog && !lastLog.answered && (
+                    <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">답변대기</span>
+                  )}
                 </p>
               </Link>
             </li>

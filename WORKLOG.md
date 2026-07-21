@@ -19,6 +19,15 @@
   - 쓰기 평가 이미지에 `print:max-h-[220px]` 추가해 인쇄 시 이미지 높이 제한.
   - 참고: 브라우저가 자체적으로 붙이는 인쇄 머리말/꼬리말(문서 제목 "독서논술 강사 매니저", URL, 날짜, 페이지 번호)은 페이지 코드로 제어 불가 — 사용자가 인쇄 대화상자에서 "머리글과 바닥글" 옵션을 꺼야 함. 사용자가 언급한 "로고"는 이 브라우저 기본 머리말이 아니라 사이드바 로고였던 것으로 확인(위 버그).
 - **학생 상태(재원/휴원/퇴원) 원터치 변경 기능** — 새 컴포넌트 `src/components/StatusToggle.tsx`: 기존 읽기 전용 `StatusBadge`와 같은 배지 스타일이지만 내부가 `<select>`라 클릭 한 번으로 상태 변경 가능. 학생관리 목록 페이지(데스크톱 테이블 + 모바일 카드)와 학생 상세 페이지 헤더에 적용, `updateStudent` 즉시 호출. 모바일 카드는 전체가 `<Link>`라 `<select>`를 그대로 중첩하면 잘못된 HTML(인터랙티브 요소 중첩)이 되므로, Link를 카드 전체를 덮는 `absolute inset-0` 스트레치 링크로 바꾸고 텍스트 영역은 `pointer-events-none`, 상태 토글만 `pointer-events-auto relative z-10`으로 감싸 클릭이 충돌 없이 분리되게 처리. `EvaluationHistoryPage`의 읽기 전용 `StatusBadge`는 그대로 둠(수업평가 화면이라 범위 밖).
+- **출결관리 신설** (`/attendance`, `/attendance/history`) — 반+날짜 선택 후 학생별 출석/지각/조퇴/결석 원터치 토글(`AttendanceCheckPage`), 월별 캘린더/리스트 이력 조회(`AttendanceHistoryPage`). `AppDataContext.setAttendanceStatus`로 학생·날짜당 1건만 유지되는 upsert 처리(같은 상태 재클릭 시 삭제). 상태 배지 색상은 `src/lib/attendanceStyles.ts`로 공통화(기존 `AttendanceHistoryTab` 중복 스타일도 이걸로 교체). `todayISO()`는 `src/lib/date.ts`로 공통화.
+- **대시보드 확장** — 오늘의 수업 일정 / 미처리 업무 알림 / 담당 학생 현황(신규·퇴원 이번 달 집계) 3개 섹션 추가.
+  - **반 스케줄 데이터 모델 변경** — `SchoolClass.schedule?: string`(자유 텍스트) → `daysOfWeek: Weekday[]` + `time?: string` + `location: '오프라인'|'온라인'`(필수)로 교체. "오늘의 수업"을 실제로 필터링하려면 구조화된 요일 데이터가 필요해서 변경함. `src/lib/classSchedule.ts`에 `isClassToday`, `formatClassSchedule`(표시용 문자열 생성), `todayWeekday`, `WEEKDAY_FULL_LABEL` 추가. `ClassListPage` 폼을 요일 체크박스+시간+장소로 교체, `ClassCurriculumDetailPage`/대시보드 표시부도 갱신. `StudentFormPage`의 "빠른 반 추가" 미니폼도 새 필드에 맞춰 수정(요일/장소는 나중에 반 목록에서 설정하도록 안내 문구 추가).
+  - **⚠️ localStorage 마이그레이션 처리 필요했음** — 이미 브라우저에 저장된 예전 형식 반 데이터(`daysOfWeek`/`location` 없음)를 그대로 불러오면 `formatClassSchedule`에서 런타임 에러가 날 수 있어서, `AppDataContext`의 클래스 로드 시 `daysOfWeek: c.daysOfWeek ?? []`, `location: c.location ?? '오프라인'` 기본값을 채우는 방어 코드 추가 (기존 `sessions ?? []` 패턴과 동일한 방식). `NotificationLog.answered`도 동일하게 `?? false` 기본값 처리.
+  - **첨삭 대기 건수** = 쓰기 이미지가 업로드됐지만 아직 영역별 점수가 없는 평가 건수(`evaluation.writing.domainScores.length === 0`).
+  - **오늘 출결 미입력** = 오늘 수업이 있는 반의 재원 학생 중 오늘 날짜 출결 기록이 없는 인원 수.
+  - **학부모 미답변 메시지** — 기존 알림 발송은 발신 전용 로그라 "답변" 개념 자체가 없어서, `NotificationLog`에 `answered: boolean` 필드와 `markNotificationAnswered` 액션을 새로 추가함. `NotificationDetailPage` 발송 이력에 답변대기/답변완료 배지 + 수동 토글 버튼 추가(자동 감지 아님, 강사가 직접 표시). `NotificationSendListPage` 카드에도 답변대기 배지 표시.
+  - **신규/퇴원(이번 달)**은 정확한 "등록일/퇴원일" 필드가 없어서 `createdAt`(신규)과 `updatedAt`(퇴원, 상태 변경 시점 proxy)을 이번 달 기준으로 집계한 근사치임 — 정확도가 중요해지면 별도 필드 고려 필요.
+  - `npx tsc -b`, `npx vite build` 통과 확인. `npx oxlint src` 실행 중 **`StudentFormPage.tsx`에서 기존부터 있던 버그 발견**: `isEdit && !existing`일 때 이른 return이 이후 `useState` 호출들보다 먼저 실행돼서 React Hooks 규칙(rules-of-hooks) 위반. 최초 커밋 때부터 있던 문제라 이번 작업 범위에서는 손대지 않음 — 잘못된 studentId로 수정 페이지 접근 시 React가 에러를 낼 수 있어 별도로 고쳐야 함.
 
 ## 프로젝트 개요
 - 독서논술 학원 강사가 학생을 관리하는 웹앱 (관리자/강사 1인용으로 보임)

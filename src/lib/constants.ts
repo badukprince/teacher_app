@@ -6,6 +6,10 @@ export const GRADE_OPTIONS = [
 
 export const STATUS_OPTIONS = ['재원', '휴원', '퇴원'] as const;
 
+export const WEEKDAY_OPTIONS = ['월', '화', '수', '목', '금', '토', '일'] as const;
+
+export const CLASS_LOCATION_OPTIONS = ['오프라인', '온라인'] as const;
+
 export const ATTENDANCE_STATUS_OPTIONS = ['출석', '지각', '결석', '조퇴'] as const;
 
 export const PARENT_RELATION_OPTIONS = ['모', '부', '조부모', '기타'] as const;

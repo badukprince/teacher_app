@@ -8,8 +8,15 @@ import { ArrowLeftIcon, ChatIcon, MailIcon } from '../../components/icons';
 
 export function NotificationDetailPage() {
   const { studentId } = useParams();
-  const { getStudent, getClass, getTextbook, getEvaluationsForStudent, getNotificationsForStudent, addNotificationLog } =
-    useAppData();
+  const {
+    getStudent,
+    getClass,
+    getTextbook,
+    getEvaluationsForStudent,
+    getNotificationsForStudent,
+    addNotificationLog,
+    markNotificationAnswered,
+  } = useAppData();
 
   const student = studentId ? getStudent(studentId) : undefined;
   const schoolClass = student ? getClass(student.classId) : undefined;
@@ -159,6 +166,13 @@ export function NotificationDetailPage() {
                   <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-600">{log.type}</span>
                   <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-600">{log.channel}</span>
                   <span className="text-xs text-slate-400">{new Date(log.sentAt).toLocaleString('ko-KR')}</span>
+                  <span
+                    className={`ml-auto rounded-full px-2 py-0.5 text-xs font-medium ${
+                      log.answered ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+                    }`}
+                  >
+                    {log.answered ? '답변완료' : '답변대기'}
+                  </span>
                 </div>
                 <p className="mt-1.5 text-sm font-medium text-slate-800">{log.subject}</p>
                 <details className="mt-1">
@@ -167,6 +181,13 @@ export function NotificationDetailPage() {
                   </summary>
                   <p className="mt-1.5 whitespace-pre-wrap text-sm text-slate-600">{log.body}</p>
                 </details>
+                <button
+                  type="button"
+                  onClick={() => markNotificationAnswered(log.id, !log.answered)}
+                  className="mt-2 text-xs font-medium text-slate-500 hover:text-brand-600"
+                >
+                  {log.answered ? '답변대기로 되돌리기' : '학부모 답변 완료로 표시'}
+                </button>
               </li>
             ))}
           </ul>

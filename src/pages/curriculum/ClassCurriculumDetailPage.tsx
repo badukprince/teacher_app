@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useAppData } from '../../store/AppDataContext';
 import { inputClass, labelClass } from '../../lib/formStyles';
 import { ProgressBar } from '../../components/ProgressBar';
+import { formatClassSchedule } from '../../lib/classSchedule';
 import {
   ArrowLeftIcon,
   ChevronDownIcon,
@@ -112,7 +113,14 @@ export function ClassCurriculumDetailPage() {
         <div>
           <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">{schoolClass.name}</h1>
           <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500">
-            <span>{schoolClass.schedule ?? '일정 미지정'}</span>
+            <span>{formatClassSchedule(schoolClass)}</span>
+            <span
+              className={`rounded px-1.5 py-0.5 text-xs font-medium ${
+                schoolClass.location === '온라인' ? 'bg-sky-50 text-sky-700' : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              {schoolClass.location}
+            </span>
             <span className="inline-flex items-center gap-1">
               <UsersIcon className="h-3.5 w-3.5 text-slate-400" />
               {activeStudentCount}명

@@ -12,6 +12,7 @@ export interface NotificationLog {
   subject: string;
   body: string;
   sentAt: string;
+  answered: boolean;
 }
 
 export type NotificationLogInput = Pick<NotificationLog, 'studentId' | 'type' | 'channel' | 'subject' | 'body'>;

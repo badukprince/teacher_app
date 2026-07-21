@@ -4,11 +4,8 @@ import { AttendanceTabs } from './AttendanceTabs';
 import { ATTENDANCE_STATUS_OPTIONS } from '../../lib/constants';
 import { ATTENDANCE_STATUS_SOLID } from '../../lib/attendanceStyles';
 import { inputClass } from '../../lib/formStyles';
+import { todayISO } from '../../lib/date';
 import { UsersIcon } from '../../components/icons';
-
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export function AttendanceCheckPage() {
   const { classes, students, setAttendanceStatus } = useAppData();

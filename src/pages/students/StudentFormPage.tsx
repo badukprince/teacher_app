@@ -44,7 +44,7 @@ export function StudentFormPage() {
 
   const [showAddClass, setShowAddClass] = useState(false);
   const [newClassName, setNewClassName] = useState('');
-  const [newClassSchedule, setNewClassSchedule] = useState('');
+  const [newClassTime, setNewClassTime] = useState('');
 
   const updateContact = (id: string, patch: Partial<ContactRow>) => {
     setContacts((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
@@ -70,10 +70,15 @@ export function StudentFormPage() {
 
   const handleAddClass = () => {
     if (!newClassName.trim()) return;
-    const created = addClass({ name: newClassName.trim(), schedule: newClassSchedule.trim() || undefined });
+    const created = addClass({
+      name: newClassName.trim(),
+      daysOfWeek: [],
+      time: newClassTime.trim() || undefined,
+      location: '오프라인',
+    });
     setClassId(created.id);
     setNewClassName('');
-    setNewClassSchedule('');
+    setNewClassTime('');
     setShowAddClass(false);
   };
 
@@ -191,11 +196,12 @@ export function StudentFormPage() {
                     className={inputClass}
                   />
                   <input
-                    value={newClassSchedule}
-                    onChange={(e) => setNewClassSchedule(e.target.value)}
-                    placeholder="수업 일정 (선택, 예: 금 17:00~18:30)"
+                    value={newClassTime}
+                    onChange={(e) => setNewClassTime(e.target.value)}
+                    placeholder="수업 시간 (선택, 예: 17:00~18:30)"
                     className={inputClass}
                   />
+                  <p className="text-xs text-slate-500">요일과 장소는 반 목록에서 나중에 설정할 수 있어요.</p>
                   <button
                     type="button"
                     onClick={handleAddClass}

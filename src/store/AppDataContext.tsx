@@ -21,7 +21,7 @@ const TEXTBOOKS_KEY = 'ronsul.textbooks.v1';
 const EVALUATIONS_KEY = 'ronsul.evaluations.v1';
 const NOTIFICATIONS_KEY = 'ronsul.notifications.v1';
 
-type ClassInput = Pick<SchoolClass, 'name' | 'gradeBand' | 'schedule' | 'mainTextbookId'>;
+type ClassInput = Pick<SchoolClass, 'name' | 'gradeBand' | 'daysOfWeek' | 'time' | 'location' | 'mainTextbookId'>;
 
 interface AppDataContextValue {
   students: Student[];
@@ -31,6 +31,7 @@ interface AppDataContextValue {
   notifications: NotificationLog[];
   getNotificationsForStudent: (studentId: string) => NotificationLog[];
   addNotificationLog: (input: NotificationLogInput) => NotificationLog;
+  markNotificationAnswered: (id: string, answered: boolean) => void;
   getStudent: (id: string) => Student | undefined;
   getClass: (id: string) => SchoolClass | undefined;
   getTextbook: (id: string) => Textbook | undefined;
@@ -69,12 +70,17 @@ const AppDataContext = createContext<AppDataContextValue | null>(null);
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const [students, setStudents] = useState<Student[]>(() => loadFromStorage(STUDENTS_KEY, seedStudents));
   const [classes, setClasses] = useState<SchoolClass[]>(() =>
-    loadFromStorage(CLASSES_KEY, seedClasses).map((c) => ({ ...c, sessions: c.sessions ?? [] })),
+    loadFromStorage(CLASSES_KEY, seedClasses).map((c) => ({
+      ...c,
+      sessions: c.sessions ?? [],
+      daysOfWeek: c.daysOfWeek ?? [],
+      location: c.location ?? '오프라인',
+    })),
   );
   const [textbooks, setTextbooks] = useState<Textbook[]>(() => loadFromStorage(TEXTBOOKS_KEY, seedTextbooks));
   const [evaluations, setEvaluations] = useState<Evaluation[]>(() => loadFromStorage(EVALUATIONS_KEY, seedEvaluations));
   const [notifications, setNotifications] = useState<NotificationLog[]>(() =>
-    loadFromStorage(NOTIFICATIONS_KEY, seedNotificationLogs),
+    loadFromStorage(NOTIFICATIONS_KEY, seedNotificationLogs).map((n) => ({ ...n, answered: n.answered ?? false })),
   );
 
   useEffect(() => saveToStorage(STUDENTS_KEY, students), [students]);
@@ -293,9 +299,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       notifications.filter((n) => n.studentId === studentId).sort((a, b) => b.sentAt.localeCompare(a.sentAt));
 
     const addNotificationLog = (input: NotificationLogInput): NotificationLog => {
-      const log: NotificationLog = { ...input, id: newId(), sentAt: new Date().toISOString() };
+      const log: NotificationLog = { ...input, id: newId(), sentAt: new Date().toISOString(), answered: false };
       setNotifications((prev) => [...prev, log]);
       return log;
+    };
+
+    const markNotificationAnswered = (id: string, answered: boolean) => {
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, answered } : n)));
     };
 
     return {
@@ -306,6 +316,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       notifications,
       getNotificationsForStudent,
       addNotificationLog,
+      markNotificationAnswered,
       getStudent,
       getClass,
       getTextbook,

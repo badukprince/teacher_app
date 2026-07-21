@@ -65,7 +65,9 @@ export const seedClasses: SchoolClass[] = [
     id: 'class-1',
     name: '화목 초등 A반',
     gradeBand: '초3~4',
-    schedule: '화, 목 16:00~17:30',
+    daysOfWeek: ['화', '목'],
+    time: '16:00~17:30',
+    location: '오프라인',
     mainTextbookId: 'tb-1',
     sessions: [
       {
@@ -122,7 +124,9 @@ export const seedClasses: SchoolClass[] = [
     id: 'class-2',
     name: '월수 초등 B반',
     gradeBand: '초5~6',
-    schedule: '월, 수 16:30~18:00',
+    daysOfWeek: ['월', '수'],
+    time: '16:30~18:00',
+    location: '오프라인',
     mainTextbookId: 'tb-3',
     sessions: [
       {
@@ -171,7 +175,9 @@ export const seedClasses: SchoolClass[] = [
     id: 'class-3',
     name: '토요 중등 심화반',
     gradeBand: '중1~2',
-    schedule: '토 10:00~12:00',
+    daysOfWeek: ['토'],
+    time: '10:00~12:00',
+    location: '온라인',
     mainTextbookId: 'tb-5',
     sessions: [
       {
@@ -552,6 +558,7 @@ export const seedNotificationLogs: NotificationLog[] = [
     subject: '[독서논술] 김민준 학생 수업평가 결과 안내',
     body: '안녕하세요, 김민준 학부모님.\n\n2026-07-14에 진행된 수업평가 결과를 안내드립니다.\n\n- 종합 점수: 83점\n\n감사합니다.',
     sentAt: '2026-07-14T10:20:00.000Z',
+    answered: true,
   },
   {
     id: 'notif-2',
@@ -561,5 +568,6 @@ export const seedNotificationLogs: NotificationLog[] = [
     subject: '[독서논술] 김민준 학생 출결 안내',
     body: '안녕하세요, 김민준 학부모님.\n\n최근 출결 현황을 안내드립니다.\n\n- 2026-07-16: 출석\n\n감사합니다.',
     sentAt: '2026-07-16T09:05:00.000Z',
+    answered: false,
   },
 ];

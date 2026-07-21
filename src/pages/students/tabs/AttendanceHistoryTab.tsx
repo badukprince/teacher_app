@@ -3,12 +3,9 @@ import { useAppData } from '../../../store/AppDataContext';
 import { inputClass, labelClass } from '../../../lib/formStyles';
 import { ATTENDANCE_STATUS_OPTIONS } from '../../../lib/constants';
 import { ATTENDANCE_STATUS_BADGE } from '../../../lib/attendanceStyles';
+import { todayISO } from '../../../lib/date';
 import { TrashIcon } from '../../../components/icons';
 import type { AttendanceStatus, Student } from '../../../types/student';
-
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export function AttendanceHistoryTab({ student }: { student: Student }) {
   const { addAttendanceRecord, removeAttendanceRecord } = useAppData();

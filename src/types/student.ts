@@ -67,11 +67,19 @@ export type StudentInput = Pick<
   'name' | 'grade' | 'school' | 'classId' | 'status' | 'phone' | 'parentContacts' | 'note'
 >;
 
+export const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'] as const;
+export type Weekday = (typeof WEEKDAYS)[number];
+
+export const CLASS_LOCATIONS = ['오프라인', '온라인'] as const;
+export type ClassLocation = (typeof CLASS_LOCATIONS)[number];
+
 export interface SchoolClass {
   id: string;
   name: string;
   gradeBand?: string;
-  schedule?: string;
+  daysOfWeek: Weekday[];
+  time?: string;
+  location: ClassLocation;
   mainTextbookId?: string;
   sessions: CurriculumSession[];
 }

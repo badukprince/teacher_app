@@ -4,17 +4,21 @@ import { useAppData } from '../../store/AppDataContext';
 import { inputClass, labelClass } from '../../lib/formStyles';
 import { CurriculumTabs } from './CurriculumTabs';
 import { ProgressBar } from '../../components/ProgressBar';
+import { formatClassSchedule } from '../../lib/classSchedule';
+import { CLASS_LOCATION_OPTIONS, WEEKDAY_OPTIONS } from '../../lib/constants';
 import { PencilIcon, PlusIcon, TrashIcon, UsersIcon } from '../../components/icons';
-import type { SchoolClass } from '../../types/student';
+import type { ClassLocation, SchoolClass, Weekday } from '../../types/student';
 
 interface FormState {
   name: string;
   gradeBand: string;
-  schedule: string;
+  daysOfWeek: Weekday[];
+  time: string;
+  location: ClassLocation;
   mainTextbookId: string;
 }
 
-const EMPTY_FORM: FormState = { name: '', gradeBand: '', schedule: '', mainTextbookId: '' };
+const EMPTY_FORM: FormState = { name: '', gradeBand: '', daysOfWeek: [], time: '', location: '오프라인', mainTextbookId: '' };
 
 export function ClassListPage() {
   const { classes, students, textbooks, getTextbook, addClass, updateClass, deleteClass } = useAppData();
@@ -40,7 +44,9 @@ export function ClassListPage() {
     setForm({
       name: c.name,
       gradeBand: c.gradeBand ?? '',
-      schedule: c.schedule ?? '',
+      daysOfWeek: c.daysOfWeek,
+      time: c.time ?? '',
+      location: c.location,
       mainTextbookId: c.mainTextbookId ?? '',
     });
     setEditingId(c.id);
@@ -49,13 +55,22 @@ export function ClassListPage() {
 
   const closeForm = () => setFormOpen(false);
 
+  const toggleDay = (day: Weekday) => {
+    setForm((f) => ({
+      ...f,
+      daysOfWeek: f.daysOfWeek.includes(day) ? f.daysOfWeek.filter((d) => d !== day) : [...f.daysOfWeek, day],
+    }));
+  };
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) return;
     const input = {
       name: form.name.trim(),
       gradeBand: form.gradeBand.trim() || undefined,
-      schedule: form.schedule.trim() || undefined,
+      daysOfWeek: form.daysOfWeek,
+      time: form.time.trim() || undefined,
+      location: form.location,
       mainTextbookId: form.mainTextbookId || undefined,
     };
     if (editingId) {
@@ -121,13 +136,25 @@ export function ClassListPage() {
               />
             </div>
             <div>
-              <label className={labelClass}>요일/시간</label>
+              <label className={labelClass}>시간</label>
               <input
-                value={form.schedule}
-                onChange={(e) => setForm((f) => ({ ...f, schedule: e.target.value }))}
-                placeholder="예: 화, 목 16:00~17:30"
+                value={form.time}
+                onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
+                placeholder="예: 16:00~17:30"
                 className={inputClass}
               />
+            </div>
+            <div>
+              <label className={labelClass}>장소</label>
+              <select
+                value={form.location}
+                onChange={(e) => setForm((f) => ({ ...f, location: e.target.value as ClassLocation }))}
+                className={inputClass}
+              >
+                {CLASS_LOCATION_OPTIONS.map((l) => (
+                  <option key={l} value={l}>{l}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className={labelClass}>담당 교재</label>
@@ -141,6 +168,25 @@ export function ClassListPage() {
                   <option key={t.id} value={t.id}>{t.title}</option>
                 ))}
               </select>
+            </div>
+            <div className="sm:col-span-2 lg:col-span-4">
+              <label className={labelClass}>요일</label>
+              <div className="flex flex-wrap gap-1.5">
+                {WEEKDAY_OPTIONS.map((day) => (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => toggleDay(day)}
+                    className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                      form.daysOfWeek.includes(day)
+                        ? 'border-brand-500 bg-brand-50 text-brand-700'
+                        : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    {day}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
           <div className="mt-3 flex gap-2">
@@ -186,7 +232,18 @@ export function ClassListPage() {
                       </Link>
                       {c.gradeBand && <p className="mt-0.5 text-xs text-slate-500">{c.gradeBand}</p>}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{c.schedule ?? '-'}</td>
+                    <td className="px-4 py-3 text-slate-600">
+                      <div className="flex items-center gap-1.5">
+                        <span>{formatClassSchedule(c)}</span>
+                        <span
+                          className={`rounded px-1.5 py-0.5 text-xs font-medium ${
+                            c.location === '온라인' ? 'bg-sky-50 text-sky-700' : 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          {c.location}
+                        </span>
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-slate-600">
                       <span className="inline-flex items-center gap-1">
                         <UsersIcon className="h-3.5 w-3.5 text-slate-400" />
@@ -236,7 +293,16 @@ export function ClassListPage() {
                       {activeStudentCount(c.id)}명
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-slate-500">{c.schedule ?? '일정 미지정'}</p>
+                  <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-500">
+                    <span>{formatClassSchedule(c)}</span>
+                    <span
+                      className={`rounded px-1.5 py-0.5 text-xs font-medium ${
+                        c.location === '온라인' ? 'bg-sky-50 text-sky-700' : 'bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      {c.location}
+                    </span>
+                  </p>
                   <p className="mt-2 text-sm text-slate-600">
                     담당 교재: {c.mainTextbookId ? getTextbook(c.mainTextbookId)?.title ?? '-' : '미지정'}
                   </p>
