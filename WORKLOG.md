@@ -46,29 +46,51 @@ localStorage만으로는 실사용이 불가능해서(한 브라우저에만 저
 - `README.md`를 프로젝트 설명 + 환경변수/배포 가이드로 전면 교체(예전엔 Vite 템플릿 기본 문구였음).
 - **`StudentFormPage.tsx`의 rules-of-hooks 버그 수정** — early return을 모든 `useState` 호출 뒤로 이동.
 
-**아직 안 끝난 것 (사용자가 직접 해야 함 — 내가 대신 못 함)**
-1. Supabase 대시보드 SQL Editor에서 `supabase/schema.sql` 실행
-2. Supabase Authentication > Users 에서 본인 계정(이메일/비밀번호) 수동 생성
-3. `.env.example`을 `.env.local`로 복사하고 Supabase Project URL + anon key 채워넣기 (`service_role` 키 아님!)
-4. `npm run dev`로 로그인 후 학생/반/평가/출결/알림 CRUD가 새로고침 후에도 유지되는지 직접 확인 (브라우저 자동화 도구가 없어서 내가 대신 확인 못 했음 — 이 세션에서는 `tsc -b`/`oxlint`/`vite build` 통과만 확인함, 실제 Supabase 연동 동작은 미검증 상태)
-5. Vercel에서 GitHub 저장소(`badukprince/teacher_app`) Import → 환경변수 2개(`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) 설정 → 배포
+**아직 안 끝난 것 — ✅ 전부 완료됨(사용자 확인).** SQL 실행, 계정 생성, `.env.local` 설정, 로컬 CRUD 확인, Vercel 배포까지 다 끝나서 실제로 배포된 상태. (아래 학부모 포털 섹션은 별개로 진행 중.)
 
 **후속 과제(지금 범위 밖, 메모만)**
 - `evaluations.writing`의 base64 이미지가 jsonb 안에 그대로 들어감 — 지금 규모(강사 1인)엔 문제없지만 나중에 다중 강사로 커지면 Supabase Storage로 옮기는 걸 권장(Plan 리뷰에서 지적됨).
 - RLS가 실제로 막아주는지: Supabase Table Editor에서 다른 teacher_id로 행을 하나 수동 삽입해보고 앱에 안 보이는지 확인하는 게 좋음(권장, 필수 아님).
 
+## 학부모 읽기 전용 포털 추가 (같은 날, 세 번째 세션)
+강사가 앱 안에서 학부모를 초대하면, 그 학부모 계정으로 로그인 시 본인 자녀 1명의 수업 진도/출결/평가/독서·첨삭 이력만 읽기 전용으로 볼 수 있는 기능. 계획은 `EnterPlanMode`로 세움 (같은 플랜 파일 `noble-riding-pumpkin.md`에 두 번째 계획으로 덮어씀 — Supabase 마이그레이션 계획 원문은 이제 안 남아있음, 필요하면 git log에서 이 커밋들 diff로 복원 가능).
+
+**확정된 설계**
+- 역할 판별은 Supabase Auth의 `app_metadata.role`(서버에서만 설정 가능, 클라이언트가 위조 불가)로. 강사는 기본값(role 없음), 학부모는 `role: 'parent'` + `student_id`.
+- `parent_contacts`에 `user_id` 컬럼 추가해서 로그인 계정과 연결 — 새 테이블 안 만들고 기존 연락처 데이터 재사용.
+- RLS: 기존 강사용 `FOR ALL` 정책은 그대로 두고, `students`/`classes`/`curriculum_sessions`/`attendance_records`/`evaluations`/`reading_records`/`feedback_records`에 학부모용 `SELECT` 전용 정책을 **추가**(같은 테이블 permissive 정책은 OR로 합쳐짐). `textbooks`는 개인정보 아니라서 로그인한 사용자 전체 열람 허용. 상담기록/알림발송이력엔 의도적으로 정책 추가 안 함(요구사항에서 제외).
+- 학부모 계정 생성은 **강사가 앱 안에서 초대** → Supabase Edge Function(`supabase/functions/invite-parent`)이 admin API로 계정 생성 + 초대 메일 발송. 함수 안에서 "호출자가 그 학부모 연락처를 소유한 강사인지"는 별도 체크 코드 없이 **anon-key + 호출자 JWT로 만든 클라이언트로 조회 → RLS가 자동으로 거부**하는 방식으로 검증(소유 아니면 조회 자체가 실패).
+
+**새로 만든/바꾼 파일**
+- DB: `supabase/002_parent_portal.sql`(기존 운영 DB용 증분 마이그레이션 — ALTER TABLE + 정책만), `supabase/schema.sql`도 최신화(신규 설치 대비). **아직 실행 안 됨.**
+- 역할 분기: `AuthContext`에 `role` 추가. `App.tsx`를 라우터로 재구성 — `TeacherApp`(기존 로직 그대로 분리), `ParentApp`(신규), `/set-password` 경로는 role 무관하게 `SetPasswordPage`로(초대 수락·비밀번호 재설정 링크 둘 다 이 경로로 리디렉션시켜서, Supabase가 정확히 어떤 auth 이벤트를 쏘는지 추측할 필요 없이 URL 경로로만 판단하도록 설계함 — 더 안정적인 선택).
+- 리팩터링: `src/pages/evaluations/EvaluationDetailPage.tsx`에서 레이더차트+성장코멘트+영역별평가+쓰기평가 부분을 `src/components/EvaluationResultView.tsx`로 추출(강사 화면 동작 불변 확인됨) — 학부모 평가 탭이 재사용.
+- **버그 발견 및 수정: `addStudent`/`updateStudent`가 `parent_contacts` 테이블에 한 번도 쓰지 않고 있었음** — 로컬 state만 갱신되고 Supabase엔 학부모 연락처가 전혀 저장 안 되던 상태(새로고침하면 사라짐). `syncParentContacts`(id 기준으로 추가/수정/삭제 diff)로 수정. 이 세션 이전(=바로 전전 세션)에 만든 코드의 결함이라 학부모 포털 작업 중 발견함.
+- `src/lib/supabaseMappers.ts` 리팩터링 — row→object 매핑을 개별 순수 함수로 뽑아서 강사용 `fetchAllData`와 신규 `fetchParentStudentData`(자기 학생 1명만, RLS에 의존해서 필터 없이 조회)가 공유.
+- `src/store/ParentDataContext.tsx`(읽기 전용, mutation 없음), `src/components/layout/ParentLayout.tsx`(사이드바 없이 헤더만), `src/pages/parent/ParentPage.tsx` + 탭 4개(`ParentCurriculumTab`/`ParentAttendanceTab`/`ParentEvaluationTab`/`ParentReadingFeedbackTab`) — 전부 기존 강사용 컴포넌트/유틸(`ProgressBar`, `formatClassSchedule`, `ATTENDANCE_STATUS_BADGE`, `EvaluationResultView`) 재사용.
+- `ParentContactsTab.tsx`에 연락처별 "학부모 계정 초대" 버튼 + 연동 상태 배지. `AppDataContext.refreshData()` 신규(초대 성공 후 userId 반영용, 기존 에러 복구 재조회 로직에서 추출).
+- `supabase/functions/invite-parent/index.ts` + `supabase` CLI를 devDependency로 추가.
+
+**아직 안 끝난 것 (사용자가 직접 해야 함)**
+1. Supabase SQL Editor에서 `supabase/002_parent_portal.sql` 실행
+2. `npx supabase login` → `npx supabase link --project-ref <ref>` → `npx supabase functions deploy invite-parent`
+3. Supabase 대시보드 Authentication > URL Configuration > Redirect URLs에 `.../set-password` 경로 2개(로컬+배포) 추가 — 안 하면 초대 메일 링크가 거부됨
+4. 실제로 초대 버튼 눌러서 메일 수신 → 링크 클릭 → 비밀번호 설정 → 로그인 → 그 학생 데이터만 보이는지, 강사 화면은 기존과 똑같이 동작하는지 직접 확인 (브라우저 자동화 도구가 없어서 이 세션에서는 `tsc -b`/`oxlint`/`vite build` 통과만 확인, 실제 초대 플로우는 미검증)
+
 ## 프로젝트 개요
-- 독서논술 학원 강사가 학생을 관리하는 웹앱 (관리자/강사 1인용으로 보임)
+- 독서논술 학원 강사가 학생을 관리하는 웹앱 + 학부모 읽기 전용 포털
 - Stack: React 19 + TypeScript + Vite + react-router-dom v7 + Tailwind CSS v4
-- 별도 백엔드 없음 — **localStorage에 전부 저장** (`src/lib/storage.ts`, key prefix `ronsul.*.v1`)
-- git 저장소 초기화 완료, `github.com/badukprince/teacher_app.git` (main) 에 push 중 — 작업 단위별로 커밋
+- 백엔드: **Supabase**(Postgres + Auth + Edge Functions), 배포: **Vercel** (실제 배포 완료, 사용 중)
+- git 저장소: `github.com/badukprince/teacher_app.git` (main) — 작업 단위별로 커밋
 - 실행: `npm run dev` / 빌드: `npm run build` / 린트: `npm run lint` (oxlint)
 
 ## 전체 아키텍처
-- `src/store/AppDataContext.tsx` — 앱 전체의 단일 데이터 소스. students/classes/textbooks/evaluations/notifications를 상태로 들고 있고, 각 변경 시 localStorage에 자동 저장(useEffect). CRUD 함수들을 컨텍스트로 노출 (`useAppData()` 훅으로 사용).
-- `src/data/seedData.ts` — localStorage가 비어있을 때 쓰는 초기 목업 데이터.
-- `src/lib/navigation.ts` — 사이드바 메뉴 8개 정의 (대시보드/학생관리/수업·커리큘럼/수업평가/출결관리/학부모 소통/자료실/마이페이지·설정).
-- `src/App.tsx` — 라우트 정의. `AppLayout` 안에 전체 페이지 중첩.
+- `src/App.tsx` — 최상위 라우터: 로딩 스피너 → `LoginPage`(세션 없음) → `/set-password`(비밀번호 설정 필요) → `role==='parent'`면 `ParentApp`, 아니면 `TeacherApp`. `AuthContext`가 role/세션을 공급.
+- **강사용**: `src/store/AppDataContext.tsx` — 단일 데이터 소스. mount 시 Supabase에서 로그인한 강사의 전체 데이터를 fetch해 기존 중첩 타입으로 재조립하고, 각 mutation은 로컬 state를 낙관적으로 갱신 + 백그라운드로 Supabase에 반영(`useAppData()` 훅). `AppLayout`이 사이드바+레이아웃.
+- **학부모용**: `src/store/ParentDataContext.tsx` — 읽기 전용, 자기 자녀 1명 데이터만(`useParentData()`). `ParentLayout` + `ParentPage`(탭 4개).
+- `src/lib/supabaseClient.ts`/`supabaseMappers.ts` — Supabase 클라이언트, DB row ↔ 앱 타입 변환 + fetch 로직(강사/학부모 공용 매퍼 함수).
+- `supabase/schema.sql` + `002_parent_portal.sql` — DB 스키마/RLS/트리거. `supabase/functions/invite-parent` — 학부모 초대 Edge Function.
+- `src/lib/navigation.ts` — 강사용 사이드바 메뉴 8개 정의 (대시보드/학생관리/수업·커리큘럼/수업평가/출결관리/학부모 소통/자료실/마이페이지·설정).
 
 ## 기능별 구현 상태
 
