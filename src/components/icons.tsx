@@ -171,6 +171,14 @@ export function CheckCircleIcon(props: IconProps) {
   );
 }
 
+export function PrinterIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0M6.72 13.829v-4.784c0-.897.657-1.68 1.55-1.771a48.717 48.717 0 0 1 7.46 0c.893.091 1.55.874 1.55 1.771v4.784m-10.56 0c-.94.14-1.87.31-2.79.51a1.5 1.5 0 0 0-1.183 1.472v3.933a1.5 1.5 0 0 0 1.5 1.5H6v-3.5a1.5 1.5 0 0 1 1.5-1.5h9a1.5 1.5 0 0 1 1.5 1.5v3.5h1.783a1.5 1.5 0 0 0 1.5-1.5v-3.933a1.5 1.5 0 0 0-1.183-1.472 41.945 41.945 0 0 0-2.79-.51m-10.56 0v-.512A1.5 1.5 0 0 1 6 12.5h12a1.5 1.5 0 0 1 .833 1.317v.512M9 21.75h6a.75.75 0 0 0 .75-.75v-2.25a.75.75 0 0 0-.75-.75H9a.75.75 0 0 0-.75.75v2.25c0 .414.336.75.75.75Z" />
+    </svg>
+  );
+}
+
 export function SparklesIcon(props: IconProps) {
   return (
     <svg {...base} {...props}>

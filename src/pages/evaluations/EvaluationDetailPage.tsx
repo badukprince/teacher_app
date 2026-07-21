@@ -2,7 +2,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAppData } from '../../store/AppDataContext';
 import { RadarChart } from '../../components/RadarChart';
 import { SUBJECT_DOMAINS, buildGrowthComment, domainScoreForRating, evaluationScores, overallScore } from '../../lib/evaluationConfig';
-import { ArrowLeftIcon, PencilIcon, TrashIcon } from '../../components/icons';
+import { ArrowLeftIcon, PencilIcon, PrinterIcon, TrashIcon } from '../../components/icons';
 import type { RatingLevel } from '../../types/evaluation';
 
 const RATING_STYLE: Record<RatingLevel, string> = {
@@ -50,7 +50,7 @@ export function EvaluationDetailPage() {
       return sum + domainScoreForRating(r.rating, domain?.weight ?? 0);
     }, 0);
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-4">
+      <div className="rounded-xl border border-slate-200 bg-white p-4 print:break-inside-avoid">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold text-slate-900">{label}</p>
           <span className="text-xs font-medium text-slate-500">{total}/100점</span>
@@ -77,7 +77,10 @@ export function EvaluationDetailPage() {
 
   return (
     <div>
-      <Link to={`/evaluations/${student.id}`} className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700">
+      <Link
+        to={`/evaluations/${student.id}`}
+        className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 print:hidden"
+      >
         <ArrowLeftIcon className="h-4 w-4" />
         평가 이력
       </Link>
@@ -87,7 +90,15 @@ export function EvaluationDetailPage() {
           <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">{student.name} · {evaluation.date} 평가</h1>
           {score !== null && <p className="mt-1 text-sm text-slate-500">종합 점수 {score}점</p>}
         </div>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex shrink-0 gap-2 print:hidden">
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            <PrinterIcon className="h-4 w-4" />
+            인쇄
+          </button>
           <Link
             to={`/evaluations/${student.id}/${evaluation.id}/edit`}
             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
@@ -106,14 +117,14 @@ export function EvaluationDetailPage() {
         </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="rounded-xl border border-slate-200 bg-white p-5">
+      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2 print:grid-cols-2">
+        <div className="rounded-xl border border-slate-200 bg-white p-5 print:break-inside-avoid">
           <RadarChart
             current={evaluationScores(evaluation) as Record<string, number>}
             previous={previous ? (evaluationScores(previous) as Record<string, number>) : null}
           />
         </div>
-        <div className="rounded-xl border border-brand-200 bg-brand-50 p-5">
+        <div className="rounded-xl border border-brand-200 bg-brand-50 p-5 print:break-inside-avoid print:border-slate-200 print:bg-white">
           <p className="text-sm font-semibold text-brand-800">성장 추이 코멘트</p>
           <p className="mt-1 text-sm text-brand-700">{growth.headline}</p>
           <p className="mt-1 text-sm text-brand-700">{growth.detail}</p>
@@ -121,16 +132,16 @@ export function EvaluationDetailPage() {
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 print:grid-cols-2">
         {ratedSection('듣기', evaluation.listening, '듣기')}
         {ratedSection('읽기', evaluation.reading, '읽기')}
         {ratedSection('말하기', evaluation.speaking, '말하기')}
         {ratedSection('생각하기', evaluation.thinking, '생각하기')}
       </div>
 
-      <div className="mt-6 rounded-xl border border-slate-200 bg-white p-5">
+      <div className="mt-6 rounded-xl border border-slate-200 bg-white p-5 print:break-before-page">
         <p className="text-sm font-semibold text-slate-900">쓰기 평가</p>
-        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2 print:grid-cols-2">
           <div>
             <p className="text-xs font-medium text-slate-500">학생 제출 원문</p>
             {evaluation.writing.imageDataUrl ? (

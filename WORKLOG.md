@@ -8,6 +8,8 @@
 - 반 목록 페이지(`ClassListPage`)에 "진도" 컬럼/모바일 카드 진도 바 추가
 - 반 상세 진도표 페이지(`ClassCurriculumDetailPage`) 상단에 "진도율" 카드 추가 (퍼센트 + 바 + 완료 차시 수 텍스트)
 - `tsc -b`, `oxlint` 통과 확인. 브라우저 확장(claude-in-chrome) 미설치로 실제 화면 스크린샷 확인은 못함 — 다음 세션에서 `npm run dev`로 육안 확인 권장.
+- **git 저장소 초기화 및 GitHub 연결** — `github.com/badukprince/teacher_app.git` (main 브랜치, 초기 커밋 푸시 완료). `.claude/settings.local.json`은 개인 로컬 설정이라 `.gitignore`에 추가해 제외함. **앞으로는 요청 없이도 작업 단위별로 커밋한다** (사용자 지시).
+- **수업평가 상세 페이지(`EvaluationDetailPage`) 인쇄 기능 추가** — "인쇄" 버튼(`window.print()`) 신설. 사이드바/헤더/수정·삭제 버튼 등 조작 UI는 `print:hidden`으로 인쇄 시 제외. 레이더차트+성장코멘트, 영역별 평가, 쓰기 평가 섹션은 `print:grid-cols-2`로 인쇄 시에도 2단 레이아웃 유지, 카드 내부가 페이지 경계에서 잘리지 않도록 `print:break-inside-avoid` 적용, 쓰기 평가 섹션은 `print:break-before-page`로 새 페이지에서 시작. `AppLayout`의 사이드바/모바일 헤더도 `print:hidden` 처리, `main` 여백은 `print:p-0`으로 제거. `vite build` 정상 통과 확인.
 
 ## 프로젝트 개요
 - 독서논술 학원 강사가 학생을 관리하는 웹앱 (관리자/강사 1인용으로 보임)

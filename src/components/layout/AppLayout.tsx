@@ -10,7 +10,7 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-screen bg-slate-50">
-      <aside className="hidden w-64 shrink-0 border-r border-slate-200 bg-white md:flex md:flex-col">
+      <aside className="hidden w-64 shrink-0 border-r border-slate-200 bg-white md:flex md:flex-col print:hidden">
         <div className="flex h-16 shrink-0 items-center gap-2 border-b border-slate-200 px-5">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500 text-sm font-bold text-white">
             독
@@ -49,7 +49,7 @@ export function AppLayout() {
       )}
 
       <div className="flex min-h-screen flex-1 flex-col">
-        <header className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4 md:hidden">
+        <header className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4 md:hidden print:hidden">
           <button
             aria-label="메뉴 열기"
             className="rounded-lg p-2 text-slate-600 hover:bg-slate-100"
@@ -65,8 +65,8 @@ export function AppLayout() {
           </div>
         </header>
 
-        <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
-          <div className="mx-auto w-full max-w-6xl">
+        <main className="flex-1 px-4 py-6 md:px-8 md:py-8 print:p-0">
+          <div className="mx-auto w-full max-w-6xl print:max-w-none">
             <ErrorBoundary key={location.pathname}>
               <Outlet />
             </ErrorBoundary>
