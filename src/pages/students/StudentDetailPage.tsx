@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAppData } from '../../store/AppDataContext';
-import { StatusBadge } from '../../components/StatusBadge';
+import { StatusToggle } from '../../components/StatusToggle';
 import { ArrowLeftIcon, PencilIcon, TrashIcon } from '../../components/icons';
+import type { StudentStatus } from '../../types/student';
 import { BasicInfoTab } from './tabs/BasicInfoTab';
 import { ParentContactsTab } from './tabs/ParentContactsTab';
 import { ReadingHistoryTab } from './tabs/ReadingHistoryTab';
@@ -15,7 +16,7 @@ type Tab = (typeof TABS)[number];
 
 export function StudentDetailPage() {
   const { studentId } = useParams();
-  const { getStudent, getClass, deleteStudent } = useAppData();
+  const { getStudent, getClass, deleteStudent, updateStudent } = useAppData();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('기본정보');
 
@@ -41,6 +42,19 @@ export function StudentDetailPage() {
     }
   };
 
+  const handleStatusChange = (status: StudentStatus) => {
+    updateStudent(student.id, {
+      name: student.name,
+      grade: student.grade,
+      school: student.school,
+      classId: student.classId,
+      status,
+      phone: student.phone,
+      parentContacts: student.parentContacts,
+      note: student.note,
+    });
+  };
+
   return (
     <div>
       <Link to="/students" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700">
@@ -52,7 +66,7 @@ export function StudentDetailPage() {
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">{student.name}</h1>
-            <StatusBadge status={student.status} />
+            <StatusToggle status={student.status} onChange={handleStatusChange} />
           </div>
           <p className="mt-1 text-sm text-slate-500">
             {student.grade} · {student.school} · {schoolClass?.name ?? '미배정'}

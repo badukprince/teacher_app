@@ -2,9 +2,9 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppData } from '../../store/AppDataContext';
 import { GRADE_OPTIONS, STATUS_OPTIONS } from '../../lib/constants';
-import { StatusBadge } from '../../components/StatusBadge';
+import { StatusToggle } from '../../components/StatusToggle';
 import { PhoneIcon, PlusIcon, SearchIcon, UsersIcon } from '../../components/icons';
-import type { Student } from '../../types/student';
+import type { Student, StudentStatus } from '../../types/student';
 
 function primaryPhone(student: Student): string {
   const primary = student.parentContacts.find((p) => p.isPrimary) ?? student.parentContacts[0];
@@ -12,11 +12,24 @@ function primaryPhone(student: Student): string {
 }
 
 export function StudentListPage() {
-  const { students, classes, getClass } = useAppData();
+  const { students, classes, getClass, updateStudent } = useAppData();
   const [search, setSearch] = useState('');
   const [classFilter, setClassFilter] = useState('all');
   const [gradeFilter, setGradeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+
+  const handleStatusChange = (student: Student, status: StudentStatus) => {
+    updateStudent(student.id, {
+      name: student.name,
+      grade: student.grade,
+      school: student.school,
+      classId: student.classId,
+      status,
+      phone: student.phone,
+      parentContacts: student.parentContacts,
+      note: student.note,
+    });
+  };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -137,7 +150,9 @@ export function StudentListPage() {
                     </td>
                     <td className="px-4 py-3 text-slate-600">{getClass(s.classId)?.name ?? '미배정'}</td>
                     <td className="px-4 py-3 text-slate-600">{primaryPhone(s)}</td>
-                    <td className="px-4 py-3"><StatusBadge status={s.status} /></td>
+                    <td className="px-4 py-3">
+                      <StatusToggle status={s.status} onChange={(status) => handleStatusChange(s, status)} />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -146,24 +161,22 @@ export function StudentListPage() {
 
           <ul className="mt-6 flex flex-col gap-3 md:hidden">
             {filtered.map((s) => (
-              <li key={s.id}>
-                <Link
-                  to={`/students/${s.id}`}
-                  className="block rounded-xl border border-slate-200 bg-white p-4 active:bg-slate-50"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-slate-900">{s.name}</span>
-                      <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-600">{s.grade}</span>
-                    </div>
-                    <StatusBadge status={s.status} />
+              <li key={s.id} className="relative rounded-xl border border-slate-200 bg-white p-4 active:bg-slate-50">
+                <Link to={`/students/${s.id}`} className="absolute inset-0" aria-label={`${s.name} 상세보기`} />
+                <div className="pointer-events-none flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-slate-900">{s.name}</span>
+                    <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-600">{s.grade}</span>
                   </div>
-                  <p className="mt-1 text-sm text-slate-500">{s.school} · {getClass(s.classId)?.name ?? '미배정'}</p>
-                  <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-600">
-                    <PhoneIcon className="h-3.5 w-3.5 text-slate-400" />
-                    {primaryPhone(s)}
-                  </p>
-                </Link>
+                  <div className="pointer-events-auto relative z-10">
+                    <StatusToggle status={s.status} onChange={(status) => handleStatusChange(s, status)} />
+                  </div>
+                </div>
+                <p className="pointer-events-none mt-1 text-sm text-slate-500">{s.school} · {getClass(s.classId)?.name ?? '미배정'}</p>
+                <p className="pointer-events-none mt-2 flex items-center gap-1.5 text-sm text-slate-600">
+                  <PhoneIcon className="h-3.5 w-3.5 text-slate-400" />
+                  {primaryPhone(s)}
+                </p>
               </li>
             ))}
           </ul>
