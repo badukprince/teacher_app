@@ -1,6 +1,11 @@
 -- 학부모 읽기 전용 포털 — 증분 마이그레이션
 -- schema.sql을 이미 실행한 기존 프로젝트에서 이 파일만 SQL Editor에 붙여넣고 한 번 실행하세요.
 -- (신규로 처음 세팅하는 경우엔 schema.sql 하나만 실행하면 됨 — 이 내용이 이미 포함되어 있음)
+--
+-- ⚠️ 이 파일의 정책엔 버그가 있어요(학부모 로그인 시 "연결된 학생 정보를
+-- 찾을 수 없어요" 발생) — 이 파일을 실행한 뒤엔 반드시 003_fix_parent_rls.sql도
+-- 이어서 실행하세요. (schema.sql은 이미 수정된 버전이 반영돼 있어서, 신규
+-- 설치는 schema.sql만 실행하면 003이 필요 없습니다.)
 
 alter table parent_contacts
   add column user_id uuid references auth.users(id) on delete set null;

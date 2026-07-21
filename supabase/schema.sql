@@ -265,52 +265,55 @@ create policy "teacher owns row" on notification_logs for all
   using (teacher_id = auth.uid()) with check (teacher_id = auth.uid());
 
 -- =========================================================
--- 학부모용 읽기 전용 RLS 정책 (자세한 설명은 supabase/002_parent_portal.sql 참고)
+-- 학부모용 읽기 전용 RLS 정책
+--
+-- parent_contacts 자체는 학부모에게 조회 권한을 주지 않는다(다른 보호자
+-- 연락처까지 노출하지 않으려는 의도) — 그래서 "이 학생의 학부모가 나인가"
+-- 확인은 SECURITY DEFINER 함수로 parent_contacts RLS를 우회해서 처리하고,
+-- 그 결과(boolean)만 아래 정책들에서 사용한다. (parent_contacts를 직접
+-- 서브쿼리로 참조하면 그 서브쿼리 자체가 RLS에 걸려 항상 0건이 되는 버그가
+-- 있었음 — 자세한 설명은 supabase/003_fix_parent_rls.sql 참고)
 -- =========================================================
 
-create policy "parent reads own student" on students for select
-  using (exists (
+create function is_linked_parent(target_student_id uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select exists (
     select 1 from parent_contacts pc
-    where pc.user_id = auth.uid() and pc.student_id = students.id
-  ));
+    where pc.user_id = auth.uid() and pc.student_id = target_student_id
+  );
+$$;
+
+create policy "parent reads own student" on students for select
+  using (is_linked_parent(students.id));
 
 create policy "parent reads own student's class" on classes for select
   using (exists (
     select 1 from students s
-    join parent_contacts pc on pc.student_id = s.id
-    where pc.user_id = auth.uid() and s.class_id = classes.id
+    where s.class_id = classes.id and is_linked_parent(s.id)
   ));
 
 create policy "parent reads own student's sessions" on curriculum_sessions for select
   using (exists (
     select 1 from students s
-    join parent_contacts pc on pc.student_id = s.id
-    where pc.user_id = auth.uid() and s.class_id = curriculum_sessions.class_id
+    where s.class_id = curriculum_sessions.class_id and is_linked_parent(s.id)
   ));
 
 create policy "parent reads own student's attendance" on attendance_records for select
-  using (exists (
-    select 1 from parent_contacts pc
-    where pc.user_id = auth.uid() and pc.student_id = attendance_records.student_id
-  ));
+  using (is_linked_parent(attendance_records.student_id));
 
 create policy "parent reads own student's evaluations" on evaluations for select
-  using (exists (
-    select 1 from parent_contacts pc
-    where pc.user_id = auth.uid() and pc.student_id = evaluations.student_id
-  ));
+  using (is_linked_parent(evaluations.student_id));
 
 create policy "parent reads own student's reading records" on reading_records for select
-  using (exists (
-    select 1 from parent_contacts pc
-    where pc.user_id = auth.uid() and pc.student_id = reading_records.student_id
-  ));
+  using (is_linked_parent(reading_records.student_id));
 
 create policy "parent reads own student's feedback records" on feedback_records for select
-  using (exists (
-    select 1 from parent_contacts pc
-    where pc.user_id = auth.uid() and pc.student_id = feedback_records.student_id
-  ));
+  using (is_linked_parent(feedback_records.student_id));
 
 create policy "authenticated users read textbooks" on textbooks for select
   using (auth.role() = 'authenticated');
