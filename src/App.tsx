@@ -1,7 +1,8 @@
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './store/AuthContext';
 import { AppDataProvider } from './store/AppDataContext';
 import { LoginPage } from './pages/LoginPage';
+import { SetPasswordPage } from './pages/SetPasswordPage';
 import { AppLayout } from './components/layout/AppLayout';
 import { Dashboard } from './pages/Dashboard';
 import { PlaceholderPage } from './pages/PlaceholderPage';
@@ -21,21 +22,7 @@ import { NotificationSendListPage } from './pages/communication/NotificationSend
 import { NotificationDetailPage } from './pages/communication/NotificationDetailPage';
 import { ConsultationLogPage } from './pages/communication/ConsultationLogPage';
 
-function App() {
-  const { session, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600" />
-      </div>
-    );
-  }
-
-  if (!session) {
-    return <LoginPage />;
-  }
-
+function TeacherApp() {
   return (
     <AppDataProvider>
       <Routes>
@@ -68,6 +55,33 @@ function App() {
       </Routes>
     </AppDataProvider>
   );
+}
+
+function ParentApp() {
+  return <PlaceholderPage title="학부모 화면 준비 중" />;
+}
+
+function App() {
+  const { session, role, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600" />
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <LoginPage />;
+  }
+
+  if (location.pathname === '/set-password') {
+    return <SetPasswordPage />;
+  }
+
+  return role === 'parent' ? <ParentApp /> : <TeacherApp />;
 }
 
 export default App;
