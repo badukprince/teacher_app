@@ -14,7 +14,7 @@ import type { Evaluation, EvaluationInput } from '../types/evaluation';
 import type { NotificationLog, NotificationLogInput } from '../types/communication';
 import { newId } from '../lib/storage';
 import { supabase } from '../lib/supabaseClient';
-import { fetchAllData } from '../lib/supabaseMappers';
+import { fetchAllData, type FetchedData } from '../lib/supabaseMappers';
 import { useAuth } from './AuthContext';
 
 type ClassInput = Pick<SchoolClass, 'name' | 'gradeBand' | 'daysOfWeek' | 'time' | 'location' | 'mainTextbookId'>;
@@ -59,6 +59,7 @@ interface AppDataContextValue {
   setAttendanceStatus: (studentId: string, date: string, status: AttendanceStatus) => void;
   addConsultationRecord: (studentId: string, record: Omit<ConsultationRecord, 'id'>) => void;
   removeConsultationRecord: (studentId: string, recordId: string) => void;
+  refreshData: () => Promise<void>;
 }
 
 const AppDataContext = createContext<AppDataContextValue | null>(null);
@@ -75,6 +76,26 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [syncError, setSyncError] = useState<string | null>(null);
 
+  const applyFetchedData = (data: FetchedData) => {
+    setStudents(data.students);
+    setClasses(data.classes);
+    setTextbooks(data.textbooks);
+    setEvaluations(data.evaluations);
+    setNotifications(data.notifications);
+  };
+
+  const refreshData = useCallback(async () => {
+    if (!teacherId) return;
+    try {
+      const data = await fetchAllData(teacherId);
+      applyFetchedData(data);
+      setSyncError(null);
+    } catch (err) {
+      console.error(err);
+      setSyncError('데이터를 불러오지 못했어요. 새로고침해주세요.');
+    }
+  }, [teacherId]);
+
   useEffect(() => {
     if (!teacherId) return;
     let cancelled = false;
@@ -82,11 +103,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     fetchAllData(teacherId)
       .then((data) => {
         if (cancelled) return;
-        setStudents(data.students);
-        setClasses(data.classes);
-        setTextbooks(data.textbooks);
-        setEvaluations(data.evaluations);
-        setNotifications(data.notifications);
+        applyFetchedData(data);
         setSyncError(null);
       })
       .catch((err) => {
@@ -105,17 +122,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     (err: unknown) => {
       console.error(err);
       setSyncError('저장에 실패했어요. 인터넷 연결을 확인해주세요.');
-      if (teacherId) {
-        fetchAllData(teacherId).then((data) => {
-          setStudents(data.students);
-          setClasses(data.classes);
-          setTextbooks(data.textbooks);
-          setEvaluations(data.evaluations);
-          setNotifications(data.notifications);
-        });
-      }
+      void refreshData();
     },
-    [teacherId],
+    [refreshData],
   );
 
   const value = useMemo<AppDataContextValue>(() => {
@@ -132,6 +141,45 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
     const patchClass = (id: string, patch: (c: SchoolClass) => SchoolClass) => {
       setClasses((prev) => prev.map((c) => (c.id === id ? patch(c) : c)));
+    };
+
+    const syncParentContacts = (studentId: string, previous: Student['parentContacts'], next: Student['parentContacts']) => {
+      const previousIds = new Set(previous.map((c) => c.id));
+      const nextIds = new Set(next.map((c) => c.id));
+      const toInsert = next.filter((c) => !previousIds.has(c.id));
+      const toUpdate = next.filter((c) => previousIds.has(c.id));
+      const toDeleteIds = previous.filter((c) => !nextIds.has(c.id)).map((c) => c.id);
+
+      if (toInsert.length > 0) {
+        supabase
+          .from('parent_contacts')
+          .insert(
+            toInsert.map((c) => ({
+              id: c.id,
+              student_id: studentId,
+              relation: c.relation,
+              name: c.name,
+              phone: c.phone,
+              email: c.email || null,
+              is_primary: c.isPrimary,
+            })),
+          )
+          .then(({ error }) => error && reportSyncFailure(error));
+      }
+      for (const c of toUpdate) {
+        supabase
+          .from('parent_contacts')
+          .update({ relation: c.relation, name: c.name, phone: c.phone, email: c.email || null, is_primary: c.isPrimary })
+          .eq('id', c.id)
+          .then(({ error }) => error && reportSyncFailure(error));
+      }
+      if (toDeleteIds.length > 0) {
+        supabase
+          .from('parent_contacts')
+          .delete()
+          .in('id', toDeleteIds)
+          .then(({ error }) => error && reportSyncFailure(error));
+      }
     };
 
     const addStudent = (input: StudentInput): Student => {
@@ -162,11 +210,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           updated_at: now,
         })
         .then(({ error }) => error && reportSyncFailure(error));
+      if (student.parentContacts.length > 0) {
+        syncParentContacts(student.id, [], student.parentContacts);
+      }
       return student;
     };
 
     const updateStudent = (id: string, input: StudentInput) => {
       const updatedAt = new Date().toISOString();
+      const previousContacts = students.find((s) => s.id === id)?.parentContacts ?? [];
       patchStudent(id, (s) => ({ ...s, ...input, updatedAt }));
       supabase
         .from('students')
@@ -182,6 +234,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         })
         .eq('id', id)
         .then(({ error }) => error && reportSyncFailure(error));
+      syncParentContacts(id, previousContacts, input.parentContacts);
     };
 
     const deleteStudent = (id: string) => {
@@ -646,8 +699,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setAttendanceStatus,
       addConsultationRecord,
       removeConsultationRecord,
+      refreshData,
     };
-  }, [students, classes, textbooks, evaluations, notifications, reportSyncFailure]);
+  }, [students, classes, textbooks, evaluations, notifications, reportSyncFailure, refreshData]);
 
   if (!teacherId) return null;
 

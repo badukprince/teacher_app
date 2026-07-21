@@ -9,6 +9,8 @@ export interface ParentContact {
   phone: string;
   email?: string;
   isPrimary: boolean;
+  /** 학부모가 초대를 수락해 로그인 계정을 만들면 그 계정의 auth id가 들어옴 */
+  userId?: string;
 }
 
 export interface ReadingRecord {
