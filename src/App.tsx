@@ -1,9 +1,12 @@
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './store/AuthContext';
 import { AppDataProvider } from './store/AppDataContext';
+import { ParentDataProvider } from './store/ParentDataContext';
 import { LoginPage } from './pages/LoginPage';
 import { SetPasswordPage } from './pages/SetPasswordPage';
 import { AppLayout } from './components/layout/AppLayout';
+import { ParentLayout } from './components/layout/ParentLayout';
+import { ParentPage } from './pages/parent/ParentPage';
 import { Dashboard } from './pages/Dashboard';
 import { PlaceholderPage } from './pages/PlaceholderPage';
 import { StudentListPage } from './pages/students/StudentListPage';
@@ -58,7 +61,16 @@ function TeacherApp() {
 }
 
 function ParentApp() {
-  return <PlaceholderPage title="학부모 화면 준비 중" />;
+  return (
+    <ParentDataProvider>
+      <Routes>
+        <Route element={<ParentLayout />}>
+          <Route index element={<ParentPage />} />
+          <Route path="*" element={<ParentPage />} />
+        </Route>
+      </Routes>
+    </ParentDataProvider>
+  );
 }
 
 function App() {
