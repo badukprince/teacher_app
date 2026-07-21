@@ -17,17 +17,6 @@ export function StudentFormPage() {
 
   const existing = isEdit && studentId ? getStudent(studentId) : undefined;
 
-  if (isEdit && !existing) {
-    return (
-      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white px-6 py-20 text-center">
-        <p className="text-sm font-medium text-slate-700">학생을 찾을 수 없어요</p>
-        <Link to="/students" className="mt-3 text-sm font-medium text-brand-600 hover:text-brand-700">
-          학생 목록으로 돌아가기
-        </Link>
-      </div>
-    );
-  }
-
   const [name, setName] = useState(existing?.name ?? '');
   const [grade, setGrade] = useState(existing?.grade ?? GRADE_OPTIONS[0]);
   const [school, setSchool] = useState(existing?.school ?? '');
@@ -45,6 +34,17 @@ export function StudentFormPage() {
   const [showAddClass, setShowAddClass] = useState(false);
   const [newClassName, setNewClassName] = useState('');
   const [newClassTime, setNewClassTime] = useState('');
+
+  if (isEdit && !existing) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white px-6 py-20 text-center">
+        <p className="text-sm font-medium text-slate-700">학생을 찾을 수 없어요</p>
+        <Link to="/students" className="mt-3 text-sm font-medium text-brand-600 hover:text-brand-700">
+          학생 목록으로 돌아가기
+        </Link>
+      </div>
+    );
+  }
 
   const updateContact = (id: string, patch: Partial<ContactRow>) => {
     setContacts((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
