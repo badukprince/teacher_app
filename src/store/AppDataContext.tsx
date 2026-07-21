@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type {
   AttendanceRecord,
+  AttendanceStatus,
   ConsultationRecord,
   FeedbackRecord,
   ReadingRecord,
@@ -58,6 +59,7 @@ interface AppDataContextValue {
   removeFeedbackRecord: (studentId: string, recordId: string) => void;
   addAttendanceRecord: (studentId: string, record: Omit<AttendanceRecord, 'id'>) => void;
   removeAttendanceRecord: (studentId: string, recordId: string) => void;
+  setAttendanceStatus: (studentId: string, date: string, status: AttendanceStatus) => void;
   addConsultationRecord: (studentId: string, record: Omit<ConsultationRecord, 'id'>) => void;
   removeConsultationRecord: (studentId: string, recordId: string) => void;
 }
@@ -237,6 +239,25 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       }));
     };
 
+    const setAttendanceStatus: AppDataContextValue['setAttendanceStatus'] = (studentId, date, status) => {
+      patchStudent(studentId, (s) => {
+        const existing = s.attendanceHistory.find((r) => r.date === date);
+        if (existing && existing.status === status) {
+          return { ...s, attendanceHistory: s.attendanceHistory.filter((r) => r.id !== existing.id) };
+        }
+        if (existing) {
+          return {
+            ...s,
+            attendanceHistory: s.attendanceHistory.map((r) => (r.id === existing.id ? { ...r, status } : r)),
+          };
+        }
+        return {
+          ...s,
+          attendanceHistory: [{ id: newId(), date, status }, ...s.attendanceHistory],
+        };
+      });
+    };
+
     const addConsultationRecord: AppDataContextValue['addConsultationRecord'] = (studentId, record) => {
       patchStudent(studentId, (s) => ({
         ...s,
@@ -313,6 +334,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       removeFeedbackRecord,
       addAttendanceRecord,
       removeAttendanceRecord,
+      setAttendanceStatus,
       addConsultationRecord,
       removeConsultationRecord,
     };

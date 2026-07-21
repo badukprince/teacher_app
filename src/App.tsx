@@ -12,6 +12,8 @@ import { EvaluationStudentListPage } from './pages/evaluations/EvaluationStudent
 import { EvaluationHistoryPage } from './pages/evaluations/EvaluationHistoryPage';
 import { EvaluationFormPage } from './pages/evaluations/EvaluationFormPage';
 import { EvaluationDetailPage } from './pages/evaluations/EvaluationDetailPage';
+import { AttendanceCheckPage } from './pages/attendance/AttendanceCheckPage';
+import { AttendanceHistoryPage } from './pages/attendance/AttendanceHistoryPage';
 import { NotificationSendListPage } from './pages/communication/NotificationSendListPage';
 import { NotificationDetailPage } from './pages/communication/NotificationDetailPage';
 import { ConsultationLogPage } from './pages/communication/ConsultationLogPage';
@@ -35,7 +37,8 @@ function App() {
         <Route path="evaluations/:studentId/new" element={<EvaluationFormPage />} />
         <Route path="evaluations/:studentId/:evaluationId" element={<EvaluationDetailPage />} />
         <Route path="evaluations/:studentId/:evaluationId/edit" element={<EvaluationFormPage />} />
-        <Route path="attendance" element={<PlaceholderPage title="출결관리" />} />
+        <Route path="attendance" element={<AttendanceCheckPage />} />
+        <Route path="attendance/history" element={<AttendanceHistoryPage />} />
         <Route path="communication" element={<NotificationSendListPage />} />
         <Route path="communication/notify/:studentId" element={<NotificationDetailPage />} />
         <Route path="communication/consultations" element={<ConsultationLogPage />} />

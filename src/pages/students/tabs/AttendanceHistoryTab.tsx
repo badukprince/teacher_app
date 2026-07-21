@@ -2,19 +2,13 @@ import { useState, type FormEvent } from 'react';
 import { useAppData } from '../../../store/AppDataContext';
 import { inputClass, labelClass } from '../../../lib/formStyles';
 import { ATTENDANCE_STATUS_OPTIONS } from '../../../lib/constants';
+import { ATTENDANCE_STATUS_BADGE } from '../../../lib/attendanceStyles';
 import { TrashIcon } from '../../../components/icons';
 import type { AttendanceStatus, Student } from '../../../types/student';
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
-
-const STATUS_STYLES: Record<AttendanceStatus, string> = {
-  출석: 'bg-emerald-50 text-emerald-700',
-  지각: 'bg-amber-50 text-amber-700',
-  결석: 'bg-red-50 text-red-700',
-  조퇴: 'bg-sky-50 text-sky-700',
-};
 
 export function AttendanceHistoryTab({ student }: { student: Student }) {
   const { addAttendanceRecord, removeAttendanceRecord } = useAppData();
@@ -66,7 +60,7 @@ export function AttendanceHistoryTab({ student }: { student: Student }) {
           {sorted.map((r) => (
             <li key={r.id} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3.5">
               <div className="flex items-center gap-3">
-                <span className={`inline-flex w-12 justify-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[r.status]}`}>
+                <span className={`inline-flex w-12 justify-center rounded-full px-2 py-0.5 text-xs font-medium ${ATTENDANCE_STATUS_BADGE[r.status]}`}>
                   {r.status}
                 </span>
                 <span className="text-sm text-slate-700">{r.date}</span>

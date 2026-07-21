@@ -24,7 +24,7 @@
 - 독서논술 학원 강사가 학생을 관리하는 웹앱 (관리자/강사 1인용으로 보임)
 - Stack: React 19 + TypeScript + Vite + react-router-dom v7 + Tailwind CSS v4
 - 별도 백엔드 없음 — **localStorage에 전부 저장** (`src/lib/storage.ts`, key prefix `ronsul.*.v1`)
-- git 저장소 아님 (`git init` 안 되어 있음) — 버전 관리 필요하면 먼저 세팅해야 함
+- git 저장소 초기화 완료, `github.com/badukprince/teacher_app.git` (main) 에 push 중 — 작업 단위별로 커밋
 - 실행: `npm run dev` / 빌드: `npm run build` / 린트: `npm run lint` (oxlint)
 
 ## 전체 아키텍처
@@ -53,23 +53,28 @@
    - `ConsultationLogPage` — 상담일지
    - `NotificationSendListPage`, `NotificationDetailPage` — 알림 발송(이메일/카카오톡 채널 선택), 발송 이력 로그
    - `src/lib/notificationTemplates.ts` — 출결/수업진도/수업평가/종합 4종류 알림 문구를 학생 데이터 기반으로 **자동 생성**하는 템플릿 엔진. 실제 발송(이메일 API, 카카오 API 연동)은 안 되어 있고 로그만 남기는 것으로 보임 — 발송 자체는 목업일 가능성 높음, 확인 필요.
+6. **출결관리** (2026-07-21 신규 구현)
+   - `/attendance` **출결 체크**(`AttendanceCheckPage`) — 반 선택 + 날짜 선택 후 재원 학생별로 출석/지각/조퇴/결석 4버튼 원터치 토글. 같은 상태 다시 누르면 기록 삭제(미체크로 되돌림). 상단에 상태별 인원 요약 + 미체크 인원 표시.
+   - `/attendance/history` **출결 이력**(`AttendanceHistoryPage`) — 반/학생/월 필터 + 캘린더 뷰(날짜별 상태 뱃지, 학생 미지정 시 상태별 인원수 집계) / 리스트 뷰(개별 기록, 삭제 가능) 전환.
+   - `AppDataContext`에 `setAttendanceStatus(studentId, date, status)` 신규 — 같은 날짜 기록이 있으면 갱신/토글삭제, 없으면 추가하는 upsert 로직. 기존 `addAttendanceRecord`/`removeAttendanceRecord`는 학생 상세 탭에서 계속 사용.
+   - 상태별 배지 색상을 `src/lib/attendanceStyles.ts`로 공통화 (기존 `AttendanceHistoryTab`의 중복 스타일 맵도 이걸로 교체).
+   - 아이콘 `ChevronLeftIcon`/`ChevronRightIcon` 신규 추가 (월 이동 버튼용).
 
 ### 🚧 미구현 (플레이스홀더만 있음)
-- `/attendance` **출결관리** — 별도 메뉴는 있지만 `PlaceholderPage`만 연결됨. 단, 학생 상세 탭 안에는 `AttendanceHistoryTab` + `AttendanceRecord` 타입/CRUD 함수(`addAttendanceRecord` 등)가 이미 존재함. 즉 **데이터 모델과 학생별 이력 관리는 있는데, 반 전체를 한눈에 보는 출결관리 메인 화면이 없는 상태.**
 - `/resources` **자료실** — `PlaceholderPage`만 있음. 타입/데이터 모델 자체가 없음.
 - `/settings` **마이페이지/설정** — `PlaceholderPage`만 있음.
 
 ## 확인이 필요한 부분 (다음 세션에서 물어볼 것)
 - 알림 발송(`communication`)이 실제로 이메일/카카오톡을 보내는지, 아니면 로그만 남기는 목업인지 — 코드상으로는 외부 API 연동 흔적이 안 보여서 목업으로 추정됨
 - AI 글쓰기 분석(`runMockAiAnalysis`)을 실제 AI(예: Claude API)로 교체할 계획이 있는지
-- 출결관리(`/attendance`), 자료실(`/resources`), 설정(`/settings`) 중 다음에 어떤 걸 먼저 만들지
+- 자료실(`/resources`), 설정(`/settings`) 중 다음에 어떤 걸 먼저 만들지
+- 출결 캘린더 뷰가 실제 데이터로 잘 보이는지 (브라우저 확장 미설치로 직접 스크린샷 확인은 못함) — `npm run dev` 육안 확인 권장
 
 ## 알려진 이슈 / 주의사항
 - 데이터는 전부 localStorage — 브라우저 캐시 삭제 시 모든 데이터 유실. 백업/내보내기 기능 없음.
 - 코드에 TODO/FIXME 주석은 없음 (검색해봤지만 0건) — 미완성 여부는 라우팅과 파일 존재 여부로만 판단 가능.
-- git 저장소가 아니라서 변경 이력 추적이 안 됨. 작업량이 늘어나면 git init 권장.
 
 ## 다음에 이어서 하면 좋을 후보
-1. 출결관리 메인 페이지 구현 (데이터 모델은 이미 있으므로 반별/날짜별 뷰만 만들면 됨)
-2. 자료실 기능 설계부터 필요 (타입 정의 없음)
-3. 알림 발송을 실제 이메일/카카오 API와 연동할지 결정
+1. 자료실 기능 설계부터 필요 (타입 정의 없음)
+2. 알림 발송을 실제 이메일/카카오 API와 연동할지 결정
+3. 출결 캘린더 뷰 실제 화면 확인 및 다듬기
