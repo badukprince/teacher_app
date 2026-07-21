@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { SidebarNav } from './SidebarNav';
-import { MenuIcon, XIcon } from '../icons';
+import { MenuIcon, LogoutIcon, XIcon } from '../icons';
 import { ErrorBoundary } from '../ErrorBoundary';
+import { useAuth } from '../../store/AuthContext';
 
 export function AppLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
+  const { session, signOut } = useAuth();
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -18,6 +20,17 @@ export function AppLayout() {
           <span className="text-base font-semibold text-slate-900">독서논술 매니저</span>
         </div>
         <SidebarNav />
+        <div className="shrink-0 border-t border-slate-200 p-3">
+          {session?.user.email && <p className="truncate px-2 text-xs text-slate-400">{session.user.email}</p>}
+          <button
+            type="button"
+            onClick={signOut}
+            className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+          >
+            <LogoutIcon className="h-5 w-5 shrink-0" />
+            로그아웃
+          </button>
+        </div>
       </aside>
 
       {drawerOpen && (
@@ -44,6 +57,17 @@ export function AppLayout() {
               </button>
             </div>
             <SidebarNav onNavigate={() => setDrawerOpen(false)} />
+            <div className="shrink-0 border-t border-slate-200 p-3">
+              {session?.user.email && <p className="truncate px-2 text-xs text-slate-400">{session.user.email}</p>}
+              <button
+                type="button"
+                onClick={signOut}
+                className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+              >
+                <LogoutIcon className="h-5 w-5 shrink-0" />
+                로그아웃
+              </button>
+            </div>
           </aside>
         </div>
       )}
