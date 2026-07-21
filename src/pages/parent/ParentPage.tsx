@@ -9,7 +9,7 @@ const TABS = ['커리큘럼', '출결', '평가', '독서·첨삭'] as const;
 type Tab = (typeof TABS)[number];
 
 export function ParentPage() {
-  const { student, schoolClass, evaluations, loading, error } = useParentData();
+  const { student, schoolClass, evaluations, textbooks, loading, error } = useParentData();
   const [tab, setTab] = useState<Tab>('커리큘럼');
 
   if (loading) {
@@ -54,7 +54,7 @@ export function ParentPage() {
       </div>
 
       <div className="mt-5">
-        {tab === '커리큘럼' && <ParentCurriculumTab schoolClass={schoolClass} />}
+        {tab === '커리큘럼' && <ParentCurriculumTab schoolClass={schoolClass} textbooks={textbooks} />}
         {tab === '출결' && <ParentAttendanceTab student={student} />}
         {tab === '평가' && <ParentEvaluationTab evaluations={evaluations} />}
         {tab === '독서·첨삭' && <ParentReadingFeedbackTab student={student} />}

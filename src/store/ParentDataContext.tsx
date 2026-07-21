@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Evaluation } from '../types/evaluation';
 import type { SchoolClass, Student } from '../types/student';
+import type { Textbook } from '../types/curriculum';
 import { fetchParentStudentData } from '../lib/supabaseMappers';
 import { useAuth } from './AuthContext';
 
@@ -8,6 +9,7 @@ interface ParentDataContextValue {
   student: Student | null;
   schoolClass: SchoolClass | null;
   evaluations: Evaluation[];
+  textbooks: Textbook[];
   loading: boolean;
   error: string | null;
 }
@@ -21,6 +23,7 @@ export function ParentDataProvider({ children }: { children: ReactNode }) {
   const [student, setStudent] = useState<Student | null>(null);
   const [schoolClass, setSchoolClass] = useState<SchoolClass | null>(null);
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
+  const [textbooks, setTextbooks] = useState<Textbook[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,6 +41,7 @@ export function ParentDataProvider({ children }: { children: ReactNode }) {
         setStudent(data.student);
         setSchoolClass(data.schoolClass);
         setEvaluations(data.evaluations);
+        setTextbooks(data.textbooks);
         setError(null);
       })
       .catch((err) => {
@@ -53,7 +57,7 @@ export function ParentDataProvider({ children }: { children: ReactNode }) {
   }, [userId]);
 
   return (
-    <ParentDataContext.Provider value={{ student, schoolClass, evaluations, loading, error }}>
+    <ParentDataContext.Provider value={{ student, schoolClass, evaluations, textbooks, loading, error }}>
       {children}
     </ParentDataContext.Provider>
   );

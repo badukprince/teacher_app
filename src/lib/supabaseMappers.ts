@@ -353,6 +353,7 @@ export interface ParentFetchedData {
   student: Student;
   schoolClass: SchoolClass | null;
   evaluations: Evaluation[];
+  textbooks: Textbook[];
 }
 
 export async function fetchParentStudentData(): Promise<ParentFetchedData | null> {
@@ -362,7 +363,7 @@ export async function fetchParentStudentData(): Promise<ParentFetchedData | null
   const studentRow = (studentsRes.data as StudentRow[])[0];
   if (!studentRow) return null;
 
-  const [classRes, sessionsRes, readingRes, feedbackRes, attendanceRes, evaluationsRes] = await Promise.all([
+  const [classRes, sessionsRes, readingRes, feedbackRes, attendanceRes, evaluationsRes, textbooksRes] = await Promise.all([
     studentRow.class_id
       ? supabase.from('classes').select('*').eq('id', studentRow.class_id).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
@@ -373,9 +374,11 @@ export async function fetchParentStudentData(): Promise<ParentFetchedData | null
     supabase.from('feedback_records').select('*').eq('student_id', studentRow.id),
     supabase.from('attendance_records').select('*').eq('student_id', studentRow.id),
     supabase.from('evaluations').select('*').eq('student_id', studentRow.id),
+    // textbooks aren't personal data — RLS lets any authenticated user (including parents) read them all
+    supabase.from('textbooks').select('*'),
   ]);
 
-  for (const res of [classRes, sessionsRes, readingRes, feedbackRes, attendanceRes, evaluationsRes]) {
+  for (const res of [classRes, sessionsRes, readingRes, feedbackRes, attendanceRes, evaluationsRes, textbooksRes]) {
     if (res.error) throw res.error;
   }
 
@@ -392,6 +395,7 @@ export async function fetchParentStudentData(): Promise<ParentFetchedData | null
   });
 
   const evaluations = (evaluationsRes.data as EvaluationRow[]).map(mapEvaluation);
+  const textbooks = (textbooksRes.data as TextbookRow[]).map(mapTextbook);
 
-  return { student, schoolClass, evaluations };
+  return { student, schoolClass, evaluations, textbooks };
 }

@@ -1,8 +1,14 @@
 import { ProgressBar } from '../../../components/ProgressBar';
 import { formatClassSchedule } from '../../../lib/classSchedule';
 import type { SchoolClass } from '../../../types/student';
+import type { Textbook } from '../../../types/curriculum';
 
-export function ParentCurriculumTab({ schoolClass }: { schoolClass: SchoolClass | null }) {
+interface ParentCurriculumTabProps {
+  schoolClass: SchoolClass | null;
+  textbooks: Textbook[];
+}
+
+export function ParentCurriculumTab({ schoolClass, textbooks }: ParentCurriculumTabProps) {
   if (!schoolClass) {
     return (
       <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
@@ -11,6 +17,8 @@ export function ParentCurriculumTab({ schoolClass }: { schoolClass: SchoolClass 
     );
   }
 
+  const getTextbook = (id?: string) => (id ? textbooks.find((t) => t.id === id) : undefined);
+  const mainTextbook = getTextbook(schoolClass.mainTextbookId);
   const completedCount = schoolClass.sessions.filter((s) => s.completed).length;
 
   return (
@@ -22,6 +30,7 @@ export function ParentCurriculumTab({ schoolClass }: { schoolClass: SchoolClass 
             <p className="mt-0.5 text-xs text-slate-500">
               {formatClassSchedule(schoolClass)} · {schoolClass.location}
             </p>
+            <p className="mt-1 text-xs text-slate-500">담당 교재: {mainTextbook?.title ?? '미지정'}</p>
           </div>
           <span className="text-sm font-semibold text-slate-900">
             {schoolClass.sessions.length === 0 ? '-' : `${Math.round((completedCount / schoolClass.sessions.length) * 100)}%`}
@@ -46,6 +55,11 @@ export function ParentCurriculumTab({ schoolClass }: { schoolClass: SchoolClass 
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-600">{index + 1}차시</span>
                 {session.date && <span className="text-xs text-slate-500">{session.date}</span>}
+                {session.textbookId && (
+                  <span className="rounded bg-brand-50 px-1.5 py-0.5 text-xs font-medium text-brand-700">
+                    {getTextbook(session.textbookId)?.title ?? '알 수 없는 교재'}
+                  </span>
+                )}
                 {!session.completed && (
                   <span className="rounded bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-700">예정</span>
                 )}
