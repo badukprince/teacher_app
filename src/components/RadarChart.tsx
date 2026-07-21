@@ -53,7 +53,14 @@ export function RadarChart({ current, previous, size = 280 }: RadarChartProps) {
 
   return (
     <div className="flex flex-col items-center">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label="평가 결과 레이더 차트">
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        role="img"
+        aria-label="평가 결과 레이더 차트"
+        className="print:h-[190px] print:w-[190px]"
+      >
         {gridPolygons.map((points, i) => (
           <polygon key={i} points={points} fill="none" stroke={COLOR_GRID} strokeWidth={1} />
         ))}

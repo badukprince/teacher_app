@@ -9,7 +9,15 @@
 - 반 상세 진도표 페이지(`ClassCurriculumDetailPage`) 상단에 "진도율" 카드 추가 (퍼센트 + 바 + 완료 차시 수 텍스트)
 - `tsc -b`, `oxlint` 통과 확인. 브라우저 확장(claude-in-chrome) 미설치로 실제 화면 스크린샷 확인은 못함 — 다음 세션에서 `npm run dev`로 육안 확인 권장.
 - **git 저장소 초기화 및 GitHub 연결** — `github.com/badukprince/teacher_app.git` (main 브랜치, 초기 커밋 푸시 완료). `.claude/settings.local.json`은 개인 로컬 설정이라 `.gitignore`에 추가해 제외함. **앞으로는 요청 없이도 작업 단위별로 커밋한다** (사용자 지시).
-- **수업평가 상세 페이지(`EvaluationDetailPage`) 인쇄 기능 추가** — "인쇄" 버튼(`window.print()`) 신설. 사이드바/헤더/수정·삭제 버튼 등 조작 UI는 `print:hidden`으로 인쇄 시 제외. 레이더차트+성장코멘트, 영역별 평가, 쓰기 평가 섹션은 `print:grid-cols-2`로 인쇄 시에도 2단 레이아웃 유지, 카드 내부가 페이지 경계에서 잘리지 않도록 `print:break-inside-avoid` 적용, 쓰기 평가 섹션은 `print:break-before-page`로 새 페이지에서 시작. `AppLayout`의 사이드바/모바일 헤더도 `print:hidden` 처리, `main` 여백은 `print:p-0`으로 제거. `vite build` 정상 통과 확인.
+- **수업평가 상세 페이지(`EvaluationDetailPage`) 인쇄 기능 추가** — "인쇄" 버튼(`window.print()`) 신설. 사이드바/헤더/수정·삭제 버튼 등 조작 UI는 `print:hidden`으로 인쇄 시 제외. 레이더차트+성장코멘트, 영역별 평가, 쓰기 평가 섹션은 `print:grid-cols-2`로 인쇄 시에도 2단 레이아웃 유지, 카드 내부가 페이지 경계에서 잘리지 않도록 `print:break-inside-avoid` 적용. `AppLayout`의 사이드바/모바일 헤더도 `print:hidden` 처리, `main` 여백은 `print:p-0`으로 제거. `vite build` 정상 통과 확인.
+- **인쇄 후속 수정 (사용자 피드백: 1장에 맞추기 + 로고 제거)**
+  - `AppLayout` 사이드바/모바일 헤더의 `print:hidden`이 `md:flex`와 같은 우선순위라 데스크톱 너비에서 인쇄하면 로고가 다시 노출되던 버그 발견 → `print:!hidden`(important)으로 교체해 확실히 숨김.
+  - 쓰기 평가 섹션을 강제로 새 페이지에서 시작시키던 `print:break-before-page` 제거 (1장에 맞추려면 불필요한 페이지 분할이었음).
+  - `src/index.css`에 `@media print { @page { size: A4; margin: 10mm 12mm } html { font-size: 13px } }` 추가로 인쇄 시 전체적으로 압축.
+  - `EvaluationDetailPage` 전반에 `print:p-*`, `print:text-*`, `print:gap-*`, `print:mt-*` 축소 클래스 다수 적용 (카드 패딩/폰트/여백 압축).
+  - `RadarChart`의 svg에 `print:w-[190px] print:h-[190px]` 추가해 인쇄 시 레이더 차트 축소 (viewBox 덕분에 비율 유지된 채 스케일링).
+  - 쓰기 평가 이미지에 `print:max-h-[220px]` 추가해 인쇄 시 이미지 높이 제한.
+  - 참고: 브라우저가 자체적으로 붙이는 인쇄 머리말/꼬리말(문서 제목 "독서논술 강사 매니저", URL, 날짜, 페이지 번호)은 페이지 코드로 제어 불가 — 사용자가 인쇄 대화상자에서 "머리글과 바닥글" 옵션을 꺼야 함. 사용자가 언급한 "로고"는 이 브라우저 기본 머리말이 아니라 사이드바 로고였던 것으로 확인(위 버그).
 
 ## 프로젝트 개요
 - 독서논술 학원 강사가 학생을 관리하는 웹앱 (관리자/강사 1인용으로 보임)
