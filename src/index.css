@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Pretendard", system-ui, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+
+  --color-brand-50: #f2f7ff;
+  --color-brand-100: #e0ebff;
+  --color-brand-200: #c2d7ff;
+  --color-brand-300: #97b9ff;
+  --color-brand-400: #6a94ff;
+  --color-brand-500: #4570fa;
+  --color-brand-600: #2e50e0;
+  --color-brand-700: #253fb3;
+  --color-brand-800: #21388f;
+  --color-brand-900: #1f3372;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
