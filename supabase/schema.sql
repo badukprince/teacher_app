@@ -77,7 +77,9 @@ create table parent_contacts (
   name text not null,
   phone text not null,
   email text,
-  is_primary boolean not null default false
+  is_primary boolean not null default false,
+  -- 학부모 본인이 초대를 수락해 로그인 계정을 만들면 연결됨 (supabase/002_parent_portal.sql 참고)
+  user_id uuid references auth.users(id) on delete set null
 );
 
 create table reading_records (
@@ -261,3 +263,54 @@ create policy "teacher owns row" on evaluations for all
   using (teacher_id = auth.uid()) with check (teacher_id = auth.uid());
 create policy "teacher owns row" on notification_logs for all
   using (teacher_id = auth.uid()) with check (teacher_id = auth.uid());
+
+-- =========================================================
+-- 학부모용 읽기 전용 RLS 정책 (자세한 설명은 supabase/002_parent_portal.sql 참고)
+-- =========================================================
+
+create policy "parent reads own student" on students for select
+  using (exists (
+    select 1 from parent_contacts pc
+    where pc.user_id = auth.uid() and pc.student_id = students.id
+  ));
+
+create policy "parent reads own student's class" on classes for select
+  using (exists (
+    select 1 from students s
+    join parent_contacts pc on pc.student_id = s.id
+    where pc.user_id = auth.uid() and s.class_id = classes.id
+  ));
+
+create policy "parent reads own student's sessions" on curriculum_sessions for select
+  using (exists (
+    select 1 from students s
+    join parent_contacts pc on pc.student_id = s.id
+    where pc.user_id = auth.uid() and s.class_id = curriculum_sessions.class_id
+  ));
+
+create policy "parent reads own student's attendance" on attendance_records for select
+  using (exists (
+    select 1 from parent_contacts pc
+    where pc.user_id = auth.uid() and pc.student_id = attendance_records.student_id
+  ));
+
+create policy "parent reads own student's evaluations" on evaluations for select
+  using (exists (
+    select 1 from parent_contacts pc
+    where pc.user_id = auth.uid() and pc.student_id = evaluations.student_id
+  ));
+
+create policy "parent reads own student's reading records" on reading_records for select
+  using (exists (
+    select 1 from parent_contacts pc
+    where pc.user_id = auth.uid() and pc.student_id = reading_records.student_id
+  ));
+
+create policy "parent reads own student's feedback records" on feedback_records for select
+  using (exists (
+    select 1 from parent_contacts pc
+    where pc.user_id = auth.uid() and pc.student_id = feedback_records.student_id
+  ));
+
+create policy "authenticated users read textbooks" on textbooks for select
+  using (auth.role() = 'authenticated');
