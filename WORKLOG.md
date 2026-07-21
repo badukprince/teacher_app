@@ -71,11 +71,15 @@ localStorage만으로는 실사용이 불가능해서(한 브라우저에만 저
 - `ParentContactsTab.tsx`에 연락처별 "학부모 계정 초대" 버튼 + 연동 상태 배지. `AppDataContext.refreshData()` 신규(초대 성공 후 userId 반영용, 기존 에러 복구 재조회 로직에서 추출).
 - `supabase/functions/invite-parent/index.ts` + `supabase` CLI를 devDependency로 추가.
 
-**아직 안 끝난 것 (사용자가 직접 해야 함)**
-1. Supabase SQL Editor에서 `supabase/002_parent_portal.sql` 실행
-2. `npx supabase login` → `npx supabase link --project-ref <ref>` → `npx supabase functions deploy invite-parent`
-3. Supabase 대시보드 Authentication > URL Configuration > Redirect URLs에 `.../set-password` 경로 2개(로컬+배포) 추가 — 안 하면 초대 메일 링크가 거부됨
-4. 실제로 초대 버튼 눌러서 메일 수신 → 링크 클릭 → 비밀번호 설정 → 로그인 → 그 학생 데이터만 보이는지, 강사 화면은 기존과 똑같이 동작하는지 직접 확인 (브라우저 자동화 도구가 없어서 이 세션에서는 `tsc -b`/`oxlint`/`vite build` 통과만 확인, 실제 초대 플로우는 미검증)
+**아직 안 끝난 것 (사용자가 직접 해야 함) — ✅ 아래 항목 전부 완료됨 (실사용자 테스트로 확인)**
+1. ~~Supabase SQL Editor에서 `supabase/002_parent_portal.sql` 실행~~ 완료
+2. ~~`npx supabase login` → `npx supabase link --project-ref <ref>` → `npx supabase functions deploy invite-parent`~~ 완료 (`supabase/.temp/`가 로컬에 생겨서 확인, `.gitignore`에 추가함)
+3. ~~Redirect URLs에 `.../set-password` 추가~~ 완료 — 초대 메일 링크로 비밀번호 설정까지 정상 동작 확인됨
+4. ~~실제 초대 플로우 테스트~~ 완료
+
+**실사용 테스트 중 발견 및 수정한 버그 2건**
+- **RLS 정책이 구조적으로 항상 거짓이 되는 버그** — `students`/`classes`/`curriculum_sessions`/`attendance_records`/`evaluations`/`reading_records`/`feedback_records`의 학부모용 정책이 전부 `parent_contacts`를 서브쿼리로 직접 참조했는데, `parent_contacts` 자체엔 "teacher owns row" 정책만 있어서 학부모 세션에서는 그 서브쿼리가 항상 0건 반환 → 정책이 절대 통과 못 함. 초대 연결/역할 부여는 다 정상인데도 로그인하면 "연결된 학생 정보를 찾을 수 없어요"가 뜨던 원인. `supabase/003_fix_parent_rls.sql`로 수정 — `SECURITY DEFINER` 함수(`is_linked_parent`)로 이 연결 확인만 RLS 우회해서 처리하도록 정책 7개 재작성. `schema.sql`도 최신화, `002`는 과거 기록으로 그대로 두고 상단에 003 참고 주석만 추가. **사용자가 003 실행 후 확인 완료.**
+- **학부모 화면에서 교재 정보가 안 보이던 버그** — `fetchParentStudentData`가 애초에 `textbooks` 테이블을 조회하지 않았음(RLS는 이미 허용돼 있었는데 fetch/표시 로직에서 빠뜨림). `ParentFetchedData`에 `textbooks` 추가하고 `ParentCurriculumTab`에 담당 교재 + 차시별 교재 배지 표시하도록 수정. **방금 push함, 아직 사용자 확인 전.**
 
 ## 프로젝트 개요
 - 독서논술 학원 강사가 학생을 관리하는 웹앱 + 학부모 읽기 전용 포털
