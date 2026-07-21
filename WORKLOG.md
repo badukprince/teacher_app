@@ -27,7 +27,35 @@
   - **오늘 출결 미입력** = 오늘 수업이 있는 반의 재원 학생 중 오늘 날짜 출결 기록이 없는 인원 수.
   - **학부모 미답변 메시지** — 기존 알림 발송은 발신 전용 로그라 "답변" 개념 자체가 없어서, `NotificationLog`에 `answered: boolean` 필드와 `markNotificationAnswered` 액션을 새로 추가함. `NotificationDetailPage` 발송 이력에 답변대기/답변완료 배지 + 수동 토글 버튼 추가(자동 감지 아님, 강사가 직접 표시). `NotificationSendListPage` 카드에도 답변대기 배지 표시.
   - **신규/퇴원(이번 달)**은 정확한 "등록일/퇴원일" 필드가 없어서 `createdAt`(신규)과 `updatedAt`(퇴원, 상태 변경 시점 proxy)을 이번 달 기준으로 집계한 근사치임 — 정확도가 중요해지면 별도 필드 고려 필요.
-  - `npx tsc -b`, `npx vite build` 통과 확인. `npx oxlint src` 실행 중 **`StudentFormPage.tsx`에서 기존부터 있던 버그 발견**: `isEdit && !existing`일 때 이른 return이 이후 `useState` 호출들보다 먼저 실행돼서 React Hooks 규칙(rules-of-hooks) 위반. 최초 커밋 때부터 있던 문제라 이번 작업 범위에서는 손대지 않음 — 잘못된 studentId로 수정 페이지 접근 시 React가 에러를 낼 수 있어 별도로 고쳐야 함.
+  - `npx tsc -b`, `npx vite build` 통과 확인. `npx oxlint src` 실행 중 **`StudentFormPage.tsx`에서 기존부터 있던 버그 발견**: `isEdit && !existing`일 때 이른 return이 이후 `useState` 호출들보다 먼저 실행돼서 React Hooks 규칙(rules-of-hooks) 위반. 최초 커밋 때부터 있던 문제 — **이후 세션에서 수정 완료** (아래 참고).
+
+## Supabase 백엔드 마이그레이션 + Vercel 배포 준비 (같은 날, 후속 세션)
+localStorage만으로는 실사용이 불가능해서(한 브라우저에만 저장, 캐시 지우면 유실) Supabase(Postgres+Auth)를 백엔드로, Vercel을 배포처로 붙이는 대규모 작업 진행. 계획은 `EnterPlanMode`로 세우고 Plan 서브에이전트 리뷰를 거침 (`C:\Users\PC\.claude\plans\noble-riding-pumpkin.md`에 계획 원문 남아있음).
+
+**확정된 설계 원칙**
+- 인증은 지금은 강사 본인 1명만, 로그인 UI만 있고 공개 회원가입 없음(계정은 Supabase 대시보드에서 수동 생성). 단 모든 테이블에 `teacher_id`를 넣어 나중에 여러 강사로 확장 가능하게 설계.
+- `teacher_id`는 클라이언트를 신뢰하지 않음 — `BEFORE INSERT` 트리거가 서버에서 강제로 채움(최상위 테이블은 `auth.uid()`, 자식 테이블은 부모 행에서 조회). RLS `WITH CHECK`가 이중 방어.
+- 기존 localStorage 데이터(테스트용 목업)는 이전하지 않고 새로 시작하기로 함 → `src/data/seedData.ts` 삭제.
+- **`useAppData()`를 쓰는 21개 페이지 파일은 한 글자도 안 건드림** — `AppDataContext`가 밖으로 노출하는 모양(배열 5개 + 함수 ~27개)을 그대로 유지하고, 내부 구현만 localStorage → Supabase로 교체. 로컬 state를 낙관적으로 먼저 갱신하고 백그라운드로 Supabase에 반영, 실패하면 배너 띄우고 전체 재조회로 동기화.
+
+**변경/신규 파일**
+- `supabase/schema.sql` — 전체 DDL 한 파일(11개 테이블, RLS, `teacher_id` 자동 채우기 트리거, `attendance_records`엔 `unique(student_id, date)`, `curriculum_sessions`엔 순서용 `position` 컬럼). **아직 실행 안 됨 — 사용자가 Supabase SQL Editor에 붙여넣고 직접 실행해야 함.**
+- `src/lib/supabaseClient.ts`, `src/lib/supabaseMappers.ts`(11개 테이블 fetch 후 기존 camelCase 중첩 타입으로 재조립), `src/store/AuthContext.tsx`(세션/로딩/로그인/로그아웃 — 새로고침 시 로그인 화면 깜빡임 방지를 위해 `loading` 상태 분리), `src/pages/LoginPage.tsx`(회원가입 UI 없음), `src/vite-env.d.ts`, `.env.example`, `vercel.json`(React Router SPA rewrite)
+- `src/store/AppDataContext.tsx` 내부 전체 재작성 (인터페이스 불변). `src/App.tsx`는 세션 없으면 `LoginPage`만, 있으면 기존 라우트. `AppLayout`/사이드바에 로그아웃 버튼 추가.
+- `src/lib/storage.ts`에서 `loadFromStorage`/`saveToStorage` 제거(더는 쓰는 곳 없음), `newId()`(클라이언트 UUID 생성, 낙관적 업데이트에 계속 필요)는 유지.
+- `README.md`를 프로젝트 설명 + 환경변수/배포 가이드로 전면 교체(예전엔 Vite 템플릿 기본 문구였음).
+- **`StudentFormPage.tsx`의 rules-of-hooks 버그 수정** — early return을 모든 `useState` 호출 뒤로 이동.
+
+**아직 안 끝난 것 (사용자가 직접 해야 함 — 내가 대신 못 함)**
+1. Supabase 대시보드 SQL Editor에서 `supabase/schema.sql` 실행
+2. Supabase Authentication > Users 에서 본인 계정(이메일/비밀번호) 수동 생성
+3. `.env.example`을 `.env.local`로 복사하고 Supabase Project URL + anon key 채워넣기 (`service_role` 키 아님!)
+4. `npm run dev`로 로그인 후 학생/반/평가/출결/알림 CRUD가 새로고침 후에도 유지되는지 직접 확인 (브라우저 자동화 도구가 없어서 내가 대신 확인 못 했음 — 이 세션에서는 `tsc -b`/`oxlint`/`vite build` 통과만 확인함, 실제 Supabase 연동 동작은 미검증 상태)
+5. Vercel에서 GitHub 저장소(`badukprince/teacher_app`) Import → 환경변수 2개(`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) 설정 → 배포
+
+**후속 과제(지금 범위 밖, 메모만)**
+- `evaluations.writing`의 base64 이미지가 jsonb 안에 그대로 들어감 — 지금 규모(강사 1인)엔 문제없지만 나중에 다중 강사로 커지면 Supabase Storage로 옮기는 걸 권장(Plan 리뷰에서 지적됨).
+- RLS가 실제로 막아주는지: Supabase Table Editor에서 다른 teacher_id로 행을 하나 수동 삽입해보고 앱에 안 보이는지 확인하는 게 좋음(권장, 필수 아님).
 
 ## 프로젝트 개요
 - 독서논술 학원 강사가 학생을 관리하는 웹앱 (관리자/강사 1인용으로 보임)
