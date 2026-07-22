@@ -4,13 +4,14 @@
 > 최종 업데이트: 2026-07-22
 
 ## 2026-07-22 추가 작업 — 쓰기 평가 AI 분석 실제 연동 (Gemini/Claude 선택형)
-기존 `runMockAiAnalysis`(seeded random 목업)를 실제 vision LLM 호출로 교체. 강사가 "AI로 분석하기"를 누를 때마다 Gemini/Claude 중 어느 쪽으로 요청할지 라디오 버튼으로 선택 가능 — 프로토타입 단계라 무료 Gemini로 시작, 나중에 정확도가 더 필요하면 Claude로 바로 전환 가능하게 설계.
-- **`supabase/functions/analyze-writing/index.ts` 신규** — `invite-parent`와 동일한 CORS/에러 응답 패턴. 입력은 `{provider, imageDataUrl, domains}`(domains는 프론트의 `SUBJECT_DOMAINS.쓰기`를 그대로 전달해 평가 기준 중복 정의 방지). 두 제공자 모두 같은 형태(`domainScores[{domainId,score,reason}]`, `overallComment`, `paragraphFeedback`)의 JSON을 구조화 출력(Claude `output_config.format` json_schema / Gemini `responseSchema`)으로 강제해서 프론트는 provider 차이를 몰라도 됨. 점수는 서버에서 `[0, weight]` 범위로 클램프. **아직 배포 안 됨 — 사용자가 `npx supabase secrets set GEMINI_API_KEY=... ANTHROPIC_API_KEY=... GEMINI_MODEL=...` 후 `npx supabase functions deploy analyze-writing` 직접 실행해야 함.**
-  - ⚠️ Gemini 모델명(`gemini-2.5-flash` 기본값)과 `responseSchema` 형식은 최신 Google AI 문서로 검증된 게 아님 — 실제 테스트 시 에러 나면 이 부분부터 의심. 재배포 없이 `GEMINI_MODEL` 시크릿만 바꿔서 교체 가능하게 해둠.
+기존 `runMockAiAnalysis`(seeded random 목업)를 실제 vision LLM 호출로 교체. 강사가 "AI로 분석하기"를 누를 때마다 Gemini/Claude 중 어느 쪽으로 요청할지 라디오 버튼으로 선택 가능 — 프로토타입 단계라 무료 Gemini로 시작, 나중에 정확도가 더 필요하면 Claude로 바로 전환 가능하게 설계. **사용자가 배포·시크릿 설정 후 Gemini로 실제 동작 확인 완료.**
+- **`supabase/functions/analyze-writing/index.ts` 신규** — `invite-parent`와 동일한 CORS/에러 응답 패턴. 입력은 `{provider, imageDataUrl, domains}`(domains는 프론트의 `SUBJECT_DOMAINS.쓰기`를 그대로 전달해 평가 기준 중복 정의 방지). 두 제공자 모두 같은 형태(`domainScores[{domainId,score,reason}]`, `overallComment`, `paragraphFeedback`)의 JSON을 구조화 출력(Claude `output_config.format` json_schema / Gemini `responseSchema`)으로 강제해서 프론트는 provider 차이를 몰라도 됨. 점수는 서버에서 `[0, weight]` 범위로 클램프.
 - **`src/types/evaluation.ts`** — `WritingDomainScore`에 `reason?: string` 추가 (AI가 점수를 매긴 근거). `writing` 컬럼이 jsonb라 DB 마이그레이션 불필요.
 - **`src/lib/evaluationConfig.ts`** — `runMockAiAnalysis`/`MockAiResult`/`AI_COMMENT_BANK`/`seededRandom` 전부 삭제 (완전히 대체되어 죽은 코드로 안 남김).
 - **`EvaluationFormPage.tsx`** — `handleRunAi`가 `supabase.functions.invoke('analyze-writing', ...)` 호출하도록 교체. Gemini/Claude 라디오 버튼, API 실패 시 빨간 에러 텍스트, 각 영역 점수 입력칸 아래 AI 근거 문구 표시 추가.
-- `npx tsc -b`, `npx vite build`, `npx oxlint src` 통과 확인. **실제 API 키 없이는 엔드투엔드 테스트 못함 — 다음 세션에서 시크릿 설정 + 함수 배포 + `npm run dev`로 Gemini/Claude 둘 다 실제 이미지로 확인 필요.**
+- **버그 수정: supabase-js의 뭉뚱그린 에러 메시지** — `functions.invoke()`가 실패하면 항상 "Edge Function returned a non-2xx status code"라는 제네릭 메시지만 던지고 실제 응답 본문은 `error.context`(Response 객체)에 숨겨둠. `FunctionsHttpError`인 경우 `error.context.json()`으로 실제 서버 에러 메시지를 꺼내오도록 수정 — 이제 화면에 원인(키 미설정, 잘못된 입력 등)이 그대로 뜸.
+- **실사용 중 발견: `gemini-2.5-flash` 기본 모델이 신규 사용자에게 단종된 상태였음** — `GEMINI_MODEL` 시크릿으로 재배포 없이 교체 가능하게 미리 만들어둔 덕에, 사용자가 Gemini `models.list` API로 사용 가능한 모델을 직접 조회해서 시크릿만 바꿔 해결. 코드 기본값(`DEFAULT_GEMINI_MODEL`)은 그대로 두었으니 새 환경에 처음 배포할 때는 이 시크릿을 반드시 설정해야 함.
+- `npx tsc -b`, `npx vite build`, `npx oxlint src` 통과 확인. **Claude 쪽은 아직 실사용 테스트 안 됨 — 라디오 버튼에서 Claude로 전환해서 확인 필요.**
 
 ## 2026-07-21 추가 작업
 - 반별 차시 진행도를 100% 기준 시각화하는 `src/components/ProgressBar.tsx` 신설 (재사용 컴포넌트)
