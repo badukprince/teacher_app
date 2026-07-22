@@ -1,13 +1,5 @@
-import type {
-  DomainDefinition,
-  Evaluation,
-  RatedSubject,
-  RatingLevel,
-  Subject,
-  WritingEvaluation,
-} from '../types/evaluation';
+import type { DomainDefinition, Evaluation, RatedSubject, RatingLevel, Subject } from '../types/evaluation';
 import { SUBJECTS } from '../types/evaluation';
-import { newId } from './storage';
 
 export const SUBJECT_DOMAINS: Record<Subject, DomainDefinition[]> = {
   듣기: [
@@ -270,44 +262,3 @@ export function buildGrowthComment(current: Evaluation, previous: Evaluation | n
   return { headline, detail: detailParts.join(' ') };
 }
 
-export interface MockAiResult {
-  domainScores: WritingEvaluation['domainScores'];
-  overallComment: string;
-  paragraphFeedback: WritingEvaluation['paragraphFeedback'];
-}
-
-const AI_COMMENT_BANK = [
-  '전체적으로 주제를 잘 이해하고 자신의 생각을 논리적으로 전개했어요.',
-  '문단 간 연결이 매끄럽고 근거를 구체적으로 제시하려는 노력이 보여요.',
-  '표현이 다소 단조로운 부분이 있어 다양한 어휘 사용을 연습하면 좋겠어요.',
-  '결론부에서 자신의 경험과 연결한 점이 인상적이에요.',
-];
-
-function seededRandom(seed: string) {
-  let h = 0;
-  for (let i = 0; i < seed.length; i += 1) {
-    h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  }
-  return () => {
-    h = (h * 1103515245 + 12345) >>> 0;
-    return (h >>> 8) / 0x1000000;
-  };
-}
-
-export function runMockAiAnalysis(seed: string): MockAiResult {
-  const rand = seededRandom(seed || String(Date.now()));
-  const domainScores = SUBJECT_DOMAINS.쓰기.map((domain) => ({
-    domainId: domain.id,
-    score: Math.round(domain.weight * (0.55 + rand() * 0.4)),
-  }));
-
-  const paragraphFeedback = [
-    { id: newId(), paragraphIndex: 1, comment: '첫 문단에서 주제를 명확히 제시했어요. 도입부에 흥미를 끄는 문장을 추가하면 더 좋아요.' },
-    { id: newId(), paragraphIndex: 2, comment: '근거가 구체적이에요. 다만 문장이 다소 길어 두 문장으로 나누면 가독성이 좋아져요.' },
-    { id: newId(), paragraphIndex: 3, comment: '결론에서 주장을 잘 요약했어요. 자신의 경험과 연결하는 문장을 한 개 더 추가해보세요.' },
-  ];
-
-  const overallComment = AI_COMMENT_BANK[Math.floor(rand() * AI_COMMENT_BANK.length)];
-
-  return { domainScores, overallComment, paragraphFeedback };
-}

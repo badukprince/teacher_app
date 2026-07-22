@@ -1,7 +1,16 @@
 # WORKLOG — 독서논술 강사용 학생관리 웹
 
 > 이 문서는 다음 세션에서 바로 이어서 작업할 수 있도록 현재 상태를 정리한 것입니다.
-> 최종 업데이트: 2026-07-21 (코드베이스를 직접 훑어보고 작성함 — 대화 기록이 아닌 실제 파일 기준)
+> 최종 업데이트: 2026-07-22
+
+## 2026-07-22 추가 작업 — 쓰기 평가 AI 분석 실제 연동 (Gemini/Claude 선택형)
+기존 `runMockAiAnalysis`(seeded random 목업)를 실제 vision LLM 호출로 교체. 강사가 "AI로 분석하기"를 누를 때마다 Gemini/Claude 중 어느 쪽으로 요청할지 라디오 버튼으로 선택 가능 — 프로토타입 단계라 무료 Gemini로 시작, 나중에 정확도가 더 필요하면 Claude로 바로 전환 가능하게 설계.
+- **`supabase/functions/analyze-writing/index.ts` 신규** — `invite-parent`와 동일한 CORS/에러 응답 패턴. 입력은 `{provider, imageDataUrl, domains}`(domains는 프론트의 `SUBJECT_DOMAINS.쓰기`를 그대로 전달해 평가 기준 중복 정의 방지). 두 제공자 모두 같은 형태(`domainScores[{domainId,score,reason}]`, `overallComment`, `paragraphFeedback`)의 JSON을 구조화 출력(Claude `output_config.format` json_schema / Gemini `responseSchema`)으로 강제해서 프론트는 provider 차이를 몰라도 됨. 점수는 서버에서 `[0, weight]` 범위로 클램프. **아직 배포 안 됨 — 사용자가 `npx supabase secrets set GEMINI_API_KEY=... ANTHROPIC_API_KEY=... GEMINI_MODEL=...` 후 `npx supabase functions deploy analyze-writing` 직접 실행해야 함.**
+  - ⚠️ Gemini 모델명(`gemini-2.5-flash` 기본값)과 `responseSchema` 형식은 최신 Google AI 문서로 검증된 게 아님 — 실제 테스트 시 에러 나면 이 부분부터 의심. 재배포 없이 `GEMINI_MODEL` 시크릿만 바꿔서 교체 가능하게 해둠.
+- **`src/types/evaluation.ts`** — `WritingDomainScore`에 `reason?: string` 추가 (AI가 점수를 매긴 근거). `writing` 컬럼이 jsonb라 DB 마이그레이션 불필요.
+- **`src/lib/evaluationConfig.ts`** — `runMockAiAnalysis`/`MockAiResult`/`AI_COMMENT_BANK`/`seededRandom` 전부 삭제 (완전히 대체되어 죽은 코드로 안 남김).
+- **`EvaluationFormPage.tsx`** — `handleRunAi`가 `supabase.functions.invoke('analyze-writing', ...)` 호출하도록 교체. Gemini/Claude 라디오 버튼, API 실패 시 빨간 에러 텍스트, 각 영역 점수 입력칸 아래 AI 근거 문구 표시 추가.
+- `npx tsc -b`, `npx vite build`, `npx oxlint src` 통과 확인. **실제 API 키 없이는 엔드투엔드 테스트 못함 — 다음 세션에서 시크릿 설정 + 함수 배포 + `npm run dev`로 Gemini/Claude 둘 다 실제 이미지로 확인 필요.**
 
 ## 2026-07-21 추가 작업
 - 반별 차시 진행도를 100% 기준 시각화하는 `src/components/ProgressBar.tsx` 신설 (재사용 컴포넌트)

@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAppData } from '../../store/AppDataContext';
-import { SUBJECT_DOMAINS, runMockAiAnalysis } from '../../lib/evaluationConfig';
+import { SUBJECT_DOMAINS } from '../../lib/evaluationConfig';
 import { fileToResizedDataUrl } from '../../lib/imageUtils';
+import { supabase } from '../../lib/supabaseClient';
 import { newId } from '../../lib/storage';
 import { inputClass, labelClass } from '../../lib/formStyles';
 import { ArrowLeftIcon, PlusIcon, SparklesIcon, TrashIcon } from '../../components/icons';
@@ -10,6 +11,8 @@ import { RatingSubjectCard } from './RatingSubjectCard';
 import type { EvaluationInput, ParagraphFeedback, RatedSubject, RatingLevel, RatingResult } from '../../types/evaluation';
 
 const RATED_SUBJECTS: RatedSubject[] = ['듣기', '읽기', '말하기', '생각하기'];
+
+type AiProvider = 'gemini' | 'claude';
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -69,8 +72,17 @@ export function EvaluationFormPage() {
     });
     return map;
   });
+  const [domainReasons, setDomainReasons] = useState<Record<string, string>>(() => {
+    const map: Record<string, string> = {};
+    existing?.writing.domainScores.forEach((s) => {
+      if (s.reason) map[s.domainId] = s.reason;
+    });
+    return map;
+  });
   const [aiAnalyzed, setAiAnalyzed] = useState(existing?.writing.aiAnalyzed ?? false);
+  const [aiProvider, setAiProvider] = useState<AiProvider>('gemini');
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
 
   const ratingState: Record<RatedSubject, [RatingMap, (m: RatingMap) => void]> = {
@@ -118,18 +130,37 @@ export function EvaluationFormPage() {
   };
 
   const handleRunAi = async () => {
+    if (!imageDataUrl) return;
     setAiLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 900));
-    const result = runMockAiAnalysis(`${student.id}-${date}-${imageDataUrl?.length ?? 0}`);
-    const scoreMap = emptyScoreMap();
-    result.domainScores.forEach((s) => {
-      scoreMap[s.domainId] = s.score;
-    });
-    setDomainScores(scoreMap);
-    setOverallComment(result.overallComment);
-    setParagraphFeedback(result.paragraphFeedback);
-    setAiAnalyzed(true);
-    setAiLoading(false);
+    setAiError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-writing', {
+        body: { provider: aiProvider, imageDataUrl, domains: SUBJECT_DOMAINS.쓰기 },
+      });
+      if (error) throw error;
+
+      const scoreMap = emptyScoreMap();
+      const reasonMap: Record<string, string> = {};
+      (data.domainScores as { domainId: string; score: number; reason?: string }[]).forEach((s) => {
+        scoreMap[s.domainId] = s.score;
+        if (s.reason) reasonMap[s.domainId] = s.reason;
+      });
+      setDomainScores(scoreMap);
+      setDomainReasons(reasonMap);
+      setOverallComment(data.overallComment ?? '');
+      setParagraphFeedback(
+        (data.paragraphFeedback as { paragraphIndex: number; comment: string }[]).map((p) => ({
+          id: newId(),
+          paragraphIndex: p.paragraphIndex,
+          comment: p.comment,
+        })),
+      );
+      setAiAnalyzed(true);
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : 'AI 분석 중 오류가 발생했어요.');
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const addParagraphRow = () => {
@@ -182,7 +213,11 @@ export function EvaluationFormPage() {
         imageDataUrl,
         overallComment: overallComment.trim(),
         paragraphFeedback,
-        domainScores: SUBJECT_DOMAINS.쓰기.map((d) => ({ domainId: d.id, score: domainScores[d.id] ?? 0 })),
+        domainScores: SUBJECT_DOMAINS.쓰기.map((d) => ({
+          domainId: d.id,
+          score: domainScores[d.id] ?? 0,
+          reason: domainReasons[d.id],
+        })),
         aiAnalyzed,
       },
     };
@@ -264,17 +299,33 @@ export function EvaluationFormPage() {
                 </button>
               )}
             </div>
+            <div className="mt-3 flex items-center gap-4">
+              {(['gemini', 'claude'] as const).map((provider) => (
+                <label key={provider} className="inline-flex items-center gap-1.5 text-sm text-slate-700">
+                  <input
+                    type="radio"
+                    name="aiProvider"
+                    value={provider}
+                    checked={aiProvider === provider}
+                    onChange={() => setAiProvider(provider)}
+                    disabled={aiLoading}
+                  />
+                  {provider === 'gemini' ? 'Gemini' : 'Claude'}
+                </label>
+              ))}
+            </div>
             <button
               type="button"
               onClick={handleRunAi}
               disabled={!imageDataUrl || aiLoading}
-              className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-40"
+              className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <SparklesIcon className="h-4 w-4" />
               {aiLoading ? 'AI 분석 중...' : 'AI로 분석하기'}
             </button>
             {!imageDataUrl && <p className="mt-1 text-xs text-slate-400">이미지를 먼저 업로드해주세요.</p>}
-            <p className="mt-1 text-xs text-slate-400">* 데모용 AI 분석이에요. 실제 서비스 연동 전까지는 예시 결과가 채워지며, 저장 전 자유롭게 수정할 수 있어요.</p>
+            {aiError && <p className="mt-1 text-xs text-red-600">{aiError}</p>}
+            <p className="mt-1 text-xs text-slate-400">* AI 분석 결과는 참고용이며 저장 전 자유롭게 수정할 수 있어요.</p>
           </div>
 
           <div className="flex flex-col gap-4">
@@ -305,6 +356,9 @@ export function EvaluationFormPage() {
                             ))}
                           </ul>
                         </details>
+                      )}
+                      {domainReasons[domain.id] && (
+                        <p className="mt-1 text-xs text-slate-500">AI 근거: {domainReasons[domain.id]}</p>
                       )}
                     </div>
                     <input

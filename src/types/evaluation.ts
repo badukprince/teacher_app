@@ -28,6 +28,7 @@ export interface ParagraphFeedback {
 export interface WritingDomainScore {
   domainId: string;
   score: number;
+  reason?: string;
 }
 
 export interface WritingEvaluation {
