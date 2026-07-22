@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAppData } from '../../store/AppDataContext';
 import { SUBJECT_DOMAINS } from '../../lib/evaluationConfig';
 import { fileToResizedDataUrl } from '../../lib/imageUtils';
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabaseClient';
 import { newId } from '../../lib/storage';
 import { inputClass, labelClass } from '../../lib/formStyles';
@@ -137,7 +138,19 @@ export function EvaluationFormPage() {
       const { data, error } = await supabase.functions.invoke('analyze-writing', {
         body: { provider: aiProvider, imageDataUrl, domains: SUBJECT_DOMAINS.쓰기 },
       });
-      if (error) throw error;
+      if (error) {
+        console.error('analyze-writing 호출 실패', error);
+        let message = error.message;
+        if (error instanceof FunctionsHttpError) {
+          try {
+            const body = await error.context.json();
+            if (body?.error) message = body.error;
+          } catch {
+            // 응답 본문을 JSON으로 읽지 못하면 기본 메시지를 그대로 사용
+          }
+        }
+        throw new Error(message);
+      }
 
       const scoreMap = emptyScoreMap();
       const reasonMap: Record<string, string> = {};
